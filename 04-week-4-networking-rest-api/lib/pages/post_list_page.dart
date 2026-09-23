@@ -16,15 +16,14 @@ class PostListPage extends ConsumerWidget {
         title: const Text('Posts API'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-            onPressed: () =>
-                ref.read(postListProvider.notifier).refresh(),
+            tooltip: 'Ke Halaman Pagination (Praktikum 3)',
+            icon: const Icon(Icons.swap_vert),
+            onPressed: () => context.push('/paged'),
           ),
           IconButton(
-            icon: const Icon(Icons.list_alt),
-            tooltip: 'Halaman Paged',
-            onPressed: () => context.push('/paged'),
+            icon: const Icon(Icons.refresh),
+            onPressed: () =>
+                ref.read(postListProvider.notifier).refresh(),
           ),
         ],
       ),

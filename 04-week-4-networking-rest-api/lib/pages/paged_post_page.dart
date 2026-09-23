@@ -9,10 +9,12 @@ class PagedPostPage extends ConsumerStatefulWidget {
   const PagedPostPage({super.key});
 
   @override
-  ConsumerState<PagedPostPage> createState() => _PagedPostPageState();
+  ConsumerState<PagedPostPage> createState() =>
+      _PagedPostPageState();
 }
 
-class _PagedPostPageState extends ConsumerState<PagedPostPage> {
+class _PagedPostPageState
+    extends ConsumerState<PagedPostPage> {
   final _controller = ScrollController();
 
   @override
@@ -37,7 +39,16 @@ class _PagedPostPageState extends ConsumerState<PagedPostPage> {
     final state = ref.watch(pagedPostsProvider);
     if (state.error != null && state.items.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Posts Paged')),
+        appBar: AppBar(
+          title: const Text('Posts Paged'),
+          actions: [
+            IconButton(
+              tooltip: 'Ke Halaman List (Praktikum 2)',
+              icon: const Icon(Icons.list_alt),
+              onPressed: () => context.go('/'),
+            ),
+          ],
+        ),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -45,8 +56,9 @@ class _PagedPostPageState extends ConsumerState<PagedPostPage> {
               Text(friendlyErrorMessage(state.error!)),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: () =>
-                    ref.read(pagedPostsProvider.notifier).loadFirstPage(),
+                onPressed: () => ref
+                    .read(pagedPostsProvider.notifier)
+                    .loadFirstPage(),
                 child: const Text('Coba lagi'),
               ),
             ],
@@ -55,7 +67,16 @@ class _PagedPostPageState extends ConsumerState<PagedPostPage> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Posts Paged')),
+      appBar: AppBar(
+        title: const Text('Posts Paged'),
+        actions: [
+          IconButton(
+            tooltip: 'Ke Halaman List (Praktikum 2)',
+            icon: const Icon(Icons.list_alt),
+            onPressed: () => context.go('/'),
+          ),
+        ],
+      ),
       body: ListView.builder(
         controller: _controller,
         itemCount: state.items.length + 1,
@@ -64,7 +85,8 @@ class _PagedPostPageState extends ConsumerState<PagedPostPage> {
             if (!state.hasMore) {
               return const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: Text('Semua data termuat.')),
+                child:
+                    Center(child: Text('Semua data termuat.')),
               );
             }
             return const Padding(

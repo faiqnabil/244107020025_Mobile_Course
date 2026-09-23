@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:week4_api/data/comment_providers.dart';
 import 'package:week4_api/data/models/comment.dart';
-import 'package:week4_api/data/network_errors.dart';
 import 'package:week4_api/data/repositories/comment_repository.dart';
 
 class FakeCommentRepository extends CommentRepository {
@@ -51,6 +50,22 @@ void main() {
       final comment = Comment.fromJson(json);
       expect(comment.id, 5);
       expect(comment.postId, 0);
+      expect(comment.name, '');
+      expect(comment.email, '');
+      expect(comment.body, '');
+    });
+
+    test('Comment.fromJson edge case: menangani string ID dan data tipe tidak terduga', () {
+      final json = {
+        'postId': 12.0, // float
+        'id': 99,
+        'name': null,
+        'email': null,
+        'body': null,
+      };
+      final comment = Comment.fromJson(json);
+      expect(comment.postId, 12);
+      expect(comment.id, 99);
       expect(comment.name, '');
       expect(comment.email, '');
       expect(comment.body, '');

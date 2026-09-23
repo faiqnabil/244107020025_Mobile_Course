@@ -1,3 +1,4 @@
+/// Model data Comment untuk endpoint /comments
 class Comment {
   const Comment({
     required this.postId,
@@ -13,6 +14,7 @@ class Comment {
   final String email;
   final String body;
 
+  /// Factory fromJson aman null menggunakan defensive casting dan fallback default
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       postId: (json['postId'] as num?)?.toInt() ?? 0,

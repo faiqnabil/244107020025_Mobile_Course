@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/comment_providers.dart';
 import '../data/providers.dart';
 
+/// Halaman detail post yang menampilkan judul, isi post lengkap,
+/// serta daftar komentar terkait via /comments?postId={id}
 class PostDetailPage extends ConsumerWidget {
   const PostDetailPage({
     super.key,

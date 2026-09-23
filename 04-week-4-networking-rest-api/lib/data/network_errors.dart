@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+/// Memetakan error jaringan (khususnya DioException) menjadi pesan
+/// yang ramah dan mudah dipahami oleh pengguna pada antarmuka aplikasi.
 String friendlyErrorMessage(Object error) {
   if (error is DioException) {
     switch (error.type) {

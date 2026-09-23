@@ -16,8 +16,6 @@ final postRepositoryProvider = Provider<PostRepository>(
 class PostListNotifier extends AsyncNotifier<List<Post>> {
   @override
   Future<List<Post>> build() async {
-    // Exception dari repository otomatis menjadi AsyncError.
-    // Inilah ekuivalen deklaratif dari AsyncValue.guard di versi lama.
     final repository = ref.watch(postRepositoryProvider);
     return repository.fetchPosts();
   }
@@ -35,32 +33,26 @@ class PostListNotifier extends AsyncNotifier<List<Post>> {
 
 final postListProvider =
     AsyncNotifierProvider<PostListNotifier, List<Post>>(
-  PostListNotifier.new,
-  // Nonaktifkan retry otomatis Riverpod 3 agar error langsung
-  // final dan mudah diuji (tanpa ini, future provider di-test
-  // akan me-retry dan menggantung).
-  retry: (retryCount, error) => null,
-);
+        PostListNotifier.new,
+        retry: (retryCount, error) => null);
 
 /// Provider untuk mengambil detail post tertentu berdasarkan ID
+/// Mengambil dari cache list terlebih dahulu bila ada, atau panggil repository langsung
 final postDetailProvider =
     FutureProvider.autoDispose.family<Post, int>((ref, id) async {
-  // Cek apakah post sudah ada di daftar postListProvider yang telah dimuat
-  final listState = ref.watch(postListProvider);
+  final listState = ref.read(postListProvider);
   if (listState.hasValue) {
     try {
       return listState.value!.firstWhere((p) => p.id == id);
     } catch (_) {
-      // Jika tidak ditemukan di list yang termuat, lanjut fetch ke repo
+      // Jika tidak ditemukan di list, fetch via repository
     }
   }
   final repository = ref.watch(postRepositoryProvider);
   return repository.fetchPostDetail(id);
 });
 
-/// Helper khusus testing (letakkan di providers.dart): membaca state
-/// pertama yang bukan loading lewat listener + completer, sehingga
-/// test tidak menunggu retry dan tidak melakukan HTTP sungguhan.
+/// Helper khusus testing: membaca state pertama yang bukan loading
 Future<List<Post>> readPostsOnce(ProviderContainer container) {
   final completer = Completer<List<Post>>();
   final sub = container.listen<AsyncValue<List<Post>>>(

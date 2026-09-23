@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/models/post.dart';
 
+/// Widget item post tersendiri agar ListView.builder lebih modular dan mudah diuji
 class PostTile extends StatelessWidget {
   const PostTile({
     super.key,

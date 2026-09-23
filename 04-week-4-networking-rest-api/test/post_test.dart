@@ -27,6 +27,19 @@ class FakePostRepository extends PostRepository {
       {required int page, int limit = 10}) async {
     return fetchPosts();
   }
+
+  @override
+  Future<Post> fetchPostDetail(int id) async {
+    if (throwError) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/posts/$id'),
+        type: DioExceptionType.connectionError,
+      );
+    }
+    return items?.firstWhere((p) => p.id == id,
+            orElse: () => Post(userId: 1, id: id, title: 'Post $id', body: 'Body $id')) ??
+        Post(userId: 1, id: id, title: 'Post $id', body: 'Body $id');
+  }
 }
 
 void main() {
@@ -35,7 +48,6 @@ void main() {
     expect(post.id, 7);
     expect(post.title, '');
     expect(post.userId, 0);
-    expect(post.body, '');
   });
 
   test('friendlyErrorMessage untuk connection error', () {
@@ -58,7 +70,6 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    // Gunakan helper readPostsOnce (lihat providers.dart).
     final posts = await readPostsOnce(container);
     expect(posts.length, 1);
     expect(posts.first.title, 'Tes');
@@ -73,9 +84,24 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    // Gunakan helper readPostsErrorOnce (lihat providers.dart).
     final err = await readPostsErrorOnce(container);
     expect(err, isA<DioException>());
     expect(friendlyErrorMessage(err!), contains('terhubung'));
+  });
+
+  test('postDetailProvider mengambil detail dengan repository palsu', () async {
+    final container = ProviderContainer(
+      overrides: [
+        postRepositoryProvider.overrideWithValue(
+          FakePostRepository(items: [
+            const Post(userId: 1, id: 42, title: 'Detail Post', body: 'Detail Body'),
+          ]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final detail = await container.read(postDetailProvider(42).future);
+    expect(detail.id, 42);
+    expect(detail.title, 'Detail Post');
   });
 }

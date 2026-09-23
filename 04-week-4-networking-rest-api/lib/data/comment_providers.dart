@@ -3,6 +3,8 @@ import 'models/comment.dart';
 import 'providers.dart';
 import 'repositories/comment_repository.dart';
 
+export 'network_errors.dart';
+
 /// Provider untuk CommentRepository yang memanfaatkan dioProvider terpusat
 final commentRepositoryProvider = Provider<CommentRepository>(
   (ref) => CommentRepository(ref.watch(dioProvider)),
