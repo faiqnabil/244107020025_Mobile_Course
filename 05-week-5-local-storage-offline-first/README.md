@@ -77,3 +77,20 @@ Aplikasi Flutter **Offline-First Notes** yang dibangun menggunakan **Riverpod**,
 ## 🧪 Hasil Pengujian
 - **`flutter analyze`**: `No issues found!`
 - **`flutter test`**: `7/7 tests passed!`
+
+---
+
+## 📸 Tangkapan Layar Aplikasi (Screenshots)
+
+Berikut adalah dokumentasi tampilan antarmuka dan pengujian fitur-fitur aplikasi:
+
+| Tangkapan Layar | Penjelasan & Deskripsi Fitur |
+| :--- | :--- |
+| ![Catatan Mode Terang Kosong](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.44.jpeg) | **1. Halaman Utama Catatan (Mode Terang - Kosong)**<br>Tampilan utama tab *Catatan* pada Tema Terang saat belum ada data. Menampilkan banner "Semua catatan telah tersinkron", tempat kosong (*empty state*), tombol Floating Action Button (`+`), serta ikon Pengaturan di sudut kanan atas. |
+| ![Tambah Catatan Baru](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.45.jpeg) | **2. Modal Form Tambah Catatan Baru**<br>Dialog input modal pada Mode Gelap untuk menambah catatan baru (Judul dan Isi Catatan). Data yang dimasukkan akan disimpan secara lokal ke dalam database SQLite (`sqflite`). |
+| ![Catatan Belum Tersinkron](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.45%20\(1\).jpeg) | **3. Indikator Belum Tersinkron (Dirty Flag)**<br>Tampilan daftar catatan setelah dibuat. Banner indikator berwarna ungu menampilkan pesan *"1 catatan belum tersinkron (dirty)"* lengkap dengan tombol **Sync** dan badge status warna oranye *"Belum Sync"* pada item catatan. |
+| ![Sinkronisasi Catatan Selesai](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.45%20\(2\).jpeg) | **4. Hasil Sinkronisasi Catatan (Sync Success)**<br>Tampilan setelah tombol **Sync** ditekan. Flag `dirty` di-reset menjadi clean, status berubah menjadi *"Semua catatan telah tersinkron"*, dan badge *"Belum Sync"* pada item hilang. |
+| ![Posts Cache List](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.46.jpeg) | **5. Tab Posts Cache (Cache-First Read)**<br>Menampilkan daftar post dari REST API (JSONPlaceholder) yang telah disimpan ke dalam cache lokal SQLite via **Dio** & **sqflite** untuk akses cepat tanpa membebankan network. |
+| ![Force Offline Mode Active](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.46%20\(1\).jpeg) | **6. Simulasi Force Offline Mode**<br>Pengujian saklar *Force Offline Mode* (posisi aktif/ON). Digunakan untuk mensimulasikan kondisi aplikasi tanpa internet untuk menguji keandalan strategi *Offline-First*. |
+| ![Pengaturan Mode Terang](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.46%20\(2\).jpeg) | **7. Halaman Pengaturan (Mode Terang)**<br>Tampilan menu Pengaturan (*Settings*) menggunakan **SharedPreferences** untuk menyimpan preferensi tema (Mode Gelap: Non-aktif) dan mencatat timestamp waktu terakhir kali aplikasi dibuka (*Last Opened At*). |
+| ![Pengaturan Mode Gelap](screenshots/WhatsApp%20Image%202026-09-24%20at%2021.53.44%20\(1\).jpeg) | **8. Halaman Pengaturan (Mode Gelap)**<br>Tampilan menu Pengaturan saat saklar *Mode Gelap* diaktifkan. Preferensi langsung tersimpan di `SharedPreferences` dan mengubah tema seluruh aplikasi secara instan. |
