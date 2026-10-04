@@ -1,31 +1,98 @@
-# Week 6 — Authentication, Security & Firebase Cloud Messaging (FCM)
+# Week 7 — Clean Architecture (Praktikum 1: Audit Layer Project Lama)
 
-Aplikasi **Campus Notify** — Implementasi alur autentikasi aman, token refresh otomatis dengan Dio & Secure Storage, serta FCM Push Notifications yang mendukung 3 state aplikasi (*Foreground*, *Background*, dan *Terminated*) dengan deep linking GoRouter.
+Project **Campus Notify** — Implementasi Refactoring Arsitektur Perangkat Lunak berbasis **Clean Architecture** (Feature-First) dan **SOLID Principles**.
 
 ---
 
-## 🚀 Fitur Utama
-1. **Penyimpanan Token Aman (`FlutterSecureStorage`):**
-   - Access token dan refresh token disimpan di storage terenkripsi (Android KeyStore / iOS Keychain).
-   - Tidak pernah menggunakan `SharedPreferences` untuk menyimpan token rahasia.
+## 📑 Praktikum 1: Audit Layer Project Lama
 
-2. **Dio Interceptor & Automatic Token Refresh:**
-   - Menyisipkan header `Authorization: Bearer <access_token>` secara otomatis pada setiap API request.
-   - Menangani HTTP 401 Unauthorized dengan melakukan refresh token otomatis (1x retry).
-   - Jika refresh token expired/invalid, storage dibersihkan dan pengguna diarahkan kembali ke `/login`.
+### 1. Pemetaan File ke Layer & Identifikasi Masalah
 
-3. **Routing Guard (`GoRouter`):**
-   - Mengamankan rute aplikasi (`AppRoutes`). Pengguna yang belum login otomatis dialihkan ke `/login`, sedangkan pengguna yang sudah login dialihkan dari `/login` ke `/`.
+Berikut adalah tabel hasil audit struktur project `campus_notify` sebelum dilakukan refactoring ke Clean Architecture:
 
-4. **Firebase Cloud Messaging (FCM) & Topic Messaging:**
-   - Izin notifikasi runtime (*runtime permission*) untuk Android 13+ & iOS.
-   - Pengelolaan *Token Lifecycle* (`getToken` & `onTokenRefresh`).
-   - Berlangganan topik `pengumuman-kampus`.
+| File | Layer saat ini | Masalah / Temuan Audit |
+| :--- | :--- | :--- |
+| `lib/pages/home_page.dart` | `presentation` | Memanggil fungsi push service FCM secara langsung di `initState()`; mencampur UI dengan logika notifikasi & manipulasi string token (`_truncateToken`). |
+| `lib/pages/login_page.dart` | `presentation` | Form login memanggil notifier secara langsung; pesan exception mentah belum dibungkus ke dalam domain `Failure`. |
+| `lib/pages/announcement_page.dart` | `presentation` | Widget presentation membaca parameter rute secara langsung tanpa layer domain/use case. |
+| `lib/data/api_client.dart` | `data` | Instansiasi `Dio(BaseOptions(...))` hardcoded langsung di file data tanpa abstraksi config atau DI. |
+| `lib/data/api_errors.dart` | `data` | Custom exception Dio belum dipetakan ke domain `Failure` sehingga penanganan error berpotensi bocor ke UI. |
+| `lib/data/auth_repository.dart` | `data` (+kontrak tercampur) | Interface (kontrak) dan implementasi masih menjadi satu kelas konkret di layer data. Tidak ada abstraksi di domain. |
+| `lib/data/token_store.dart` | `data` | Instansiasi default `FlutterSecureStorage()` dilakukan langsung pada constructor tanpa penyuntikan dependensi (DI). |
+| `lib/providers/auth_provider.dart` | `presentation` / `data` mix | Instansiasi `AuthRepository()` dan `TokenStore()` dilakukan secara manual di dalam provider (`authRepositoryProvider`, `tokenStoreProvider`), menyebabkan DI bocor. |
+| `lib/messaging/push_service.dart` | `infrastructure` / `data` | Service messaging FCM berada di luar struktur layer Clean Architecture standar (perlu direstrukturisasi). |
 
-5. **Penanganan 3 App State Notifikasi:**
-   - **Foreground:** Banner lokal ditampilkan secara manual via `flutter_local_notifications`.
-   - **Background:** Banner sistem OS otomatis + handler klik `onMessageOpenedApp`.
-   - **Terminated:** Handler peluncuran awal via `getInitialMessage()`.
+---
+
+### 2. Audit Tiga Pelanggaran Klasik (Grep Analysis)
+
+Pemeriksaan otomatis menggunakan grep (`rg`) dilakukan untuk menandai titik-titik pelanggaran aturan dependensi dan DI:
+
+#### 🔍 Audit 1: Widget / Presentation yang menyentuh Jaringan / Storage / Database secara langsung
+```bash
+rg "Dio\(|http\.|openDatabase|SharedPreferences\.getInstance|FlutterSecureStorage" lib/pages lib/widgets
+```
+- **Hasil Audit**:
+  - `lib/data/token_store.dart`: `const FlutterSecureStorage()` (Instansiasi langsung storage)
+  - `lib/data/api_client.dart`: `Dio(BaseOptions(...))` (Instansiasi langsung HTTP Client)
+  - *Target Refactor*: Pastikan tidak ada widget/presentation yang menginstansiasi atau mengakses driver storage/network secara langsung.
+
+#### 🔍 Audit 2: Logika Bisnis & Formatting di dalam build() / Presentation
+```bash
+rg "DateFormat|jsonDecode|\.toIso8601String" lib/pages lib/widgets
+```
+- **Hasil Audit**: 0 temuan langsung untuk `DateFormat`/`jsonDecode`, namun ditemukan logika manipulasi/formatting string token FCM di `HomePage._truncateToken()` yang berada di presentation layer.
+- *Target Refactor*: Pindahkan seluruh formatting dan transformasi data ke domain/use case atau presenter helper murni.
+
+#### 🔍 Audit 3: Instansiasi Manual (Dependency Injection Bocor)
+```bash
+rg "Repository\(|Dio\(BaseOptions" lib/pages lib/providers
+```
+- **Hasil Audit**:
+  - `lib/providers/auth_provider.dart:7`: `Provider<AuthRepository>((ref) => AuthRepository());` (Instansiasi kelas konkret tanpa abstraksi interface)
+  - `lib/data/api_client.dart:6`: `final dio = Dio(BaseOptions(...));` (Instansiasi manual `Dio`)
+- *Target Refactor*: Seluruh instansiasi repository harus menggunakan kontrak *abstract class* di domain layer dan disuntikkan via Riverpod Provider.
+
+> 🎯 **Target Akhir Audit**: Setelah Praktikum 3, ketiga perintah grep di atas harus menghasilkan **0 temuan (NOL HASIL)** pada folder presentation dan domain!
+
+---
+
+### 3. Gambaran Struktur Target Clean Architecture (Feature-First)
+
+Berikut adalah struktur target yang dirancang untuk merefactor project ini ke dalam arsitektur **Feature-First Clean Architecture**:
+
+```text
+lib/
+├── core/
+│   ├── failures.dart                        # Failure domain murni Dart (seperti LocalFailure, NetworkFailure)
+│   └── providers.dart                       # Provider global / lintas fitur (misal: shared preferences, secure storage)
+├── features/
+│   ├── auth/
+│   │   ├── domain/
+│   │   │   ├── entities/auth_session.dart   # Entity bisnis murni (tanpa JSON mapping)
+│   │   │   ├── repositories/auth_repository.dart # Interface / Contract repository
+│   │   │   └── usecases/login.dart          # Single business operation use case
+│   │   ├── data/
+│   │   │   ├── models/auth_session_model.dart  # Model data + mapping toEntity() / toMap()
+│   │   │   └── repositories/auth_repository_impl.dart # Implementasi repository konkret
+│   │   └── presentation/
+│   │       ├── providers/auth_providers.dart # Riverpod Notifier + Wiring DI
+│   │       └── pages/login_page.dart        # Page UI murni
+│   └── announcements/
+│       ├── domain/
+│       │   ├── entities/announcement.dart   # Entity pengumuman
+│       │   ├── repositories/announcement_repository.dart # Interface repository
+│       │   └── usecases/get_announcements.dart # Use case membaca pengumuman
+│       ├── data/
+│       │   ├── models/announcement_model.dart # Model pengumuman + JSON parser
+│       │   └── repositories/announcement_repository_impl.dart # Implementasi
+│       └── presentation/
+│           ├── providers/announcement_providers.dart # Provider state UI
+│           └── pages/
+│               ├── home_page.dart
+│               └── announcement_page.dart
+└── routes.dart                              # Declarative routing (GoRouter)
+```
 
 ---
 
@@ -36,90 +103,19 @@ Aplikasi **Campus Notify** — Implementasi alur autentikasi aman, token refresh
 - **Dio** (HTTP Client & Interceptors)
 - **flutter_secure_storage** (Secure Token Storage)
 - **firebase_core** & **firebase_messaging** (FCM Services)
-- **flutter_local_notifications** (Foreground Notification Display)
 
 ---
 
-## 📂 Struktur Project
-```text
-06-week-6-authentication-security-fcm/
-├── android/
-├── ios/
-├── lib/
-│   ├── main.dart
-│   ├── routes.dart
-│   ├── data/
-│   │   ├── api_client.dart
-│   │   ├── api_errors.dart
-│   │   ├── auth_repository.dart
-│   │   └── token_store.dart
-│   ├── messaging/
-│   │   └── push_service.dart
-│   ├── providers/
-│   │   └── auth_provider.dart
-│   └── pages/
-│       ├── login_page.dart
-│       ├── home_page.dart
-│       └── announcement_page.dart
-├── test/
-│   └── auth_push_test.dart
-├── docs/
-│   ├── ai_challenge.md
-│   ├── app_state_testing.md
-│   └── refleksi_dan_referensi.md
-├── screenshots/
-├── pubspec.yaml
-└── README.md
-```
-
----
-
-## 📸 Tangkapan Layar (Screenshots)
-
-| Halaman Login | Halaman Utama (Home) | Halaman Detail Pengumuman |
-| :---: | :---: | :---: |
-| <img src="screenshots/WhatsApp%20Image%202026-10-04%20at%2015.57.18.jpeg" width="240" alt="Halaman Login"> | <img src="screenshots/WhatsApp%20Image%202026-10-04%20at%2015.57.18%20(1).jpeg" width="240" alt="Halaman Home"> | <img src="screenshots/WhatsApp%20Image%202026-10-04%20at%2015.57.18%20(2).jpeg" width="240" alt="Halaman Pengumuman"> |
-
-### 📝 Penjelasan Singkat:
-1. **Halaman Login (`/login`)**:
-   - Tampilan form autentikasi pengguna (email & password).
-   - Diatur oleh *Routing Guard* (`GoRouter`), sehingga pengguna yang belum terautentikasi dialihkan otomatis ke halaman ini.
-
-2. **Halaman Utama (`/`)**:
-   - Dashboard aplikasi **Campus Notify** setelah berhasil masuk.
-   - Menampilkan status **Debug Info FCM** (status izin notifikasi dan ketersediaan FCM Token).
-   - Menyediakan tombol navigasi ke sampel pengumuman dan opsi **Logout**.
-
-3. **Halaman Pengumuman (`/pengumuman/:id`)**:
-   - Halaman rincian pengumuman kampus.
-   - Dapat diakses dari aplikasi maupun secara langsung via *Deep Linking* saat pengguna mengetuk Notifikasi Push FCM (*Foreground*, *Background*, atau *Terminated* state).
-
----
-
-## 📊 Hasil Pengujian 3 App State
-
-| App State | Kondisi Aplikasi | Tampilan Notifikasi | Navigasi Klik | Status |
-| :--- | :--- | :--- | :--- | :---: |
-| **Foreground** | Aplikasi Terbuka | Local Notification Banner | Menuju `/pengumuman/:id` | **PASS** |
-| **Background** | App di Background | System Notification Banner | Menuju `/pengumuman/:id` | **PASS** |
-| **Terminated** | App Dimatikan | System Notification Banner | Menuju `/pengumuman/:id` | **PASS** |
-
----
-
-## 🧪 Unit Testing & Analisis Kode
-Dapat diverifikasi dengan perintah berikut:
+## 🧪 Verifikasi Status Snapshot Project
+Snapshot project sebelum refactoring telah dibuat dan dapat diverifikasi melalui perintah:
 
 ```bash
-# Analisis Kode (harus bersih tanpa issue)
+# Snapshot Git Commit
+git log -n 1
+
+# Analisis Static Code
 flutter analyze
 
-# Unit Test (semua test lulus)
+# Running Unit Tests
 flutter test
 ```
-
----
-
-## 📑 Dokumentasi Terkait
-- [Dokumentasi AI Challenge & Log Perbaikan (docs/ai_challenge.md)](docs/ai_challenge.md)
-- [Tabel & Detail Pengujian 3 App State (docs/app_state_testing.md)](docs/app_state_testing.md)
-- [Jawaban Refleksi & Referensi (docs/refleksi_dan_referensi.md)](docs/refleksi_dan_referensi.md)
