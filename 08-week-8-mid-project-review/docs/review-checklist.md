@@ -87,3 +87,95 @@ Tabel berikut menunjukkan penulisan ulang 3 pesan commit lama dari riwayat proye
 | `1f9cc79` | `Praktikum Pertemuan 6` | `feat(auth): implementasi otentikasi token store dan fcm push notification + test` | Pesan lama hanya menyebutkan nama pertemuan perkuliahan tanpa konteks teknis. Format baru menjelaskan tipe `feat`, scope modul `auth`, penambahan token store aman, integrasi notifikasi FCM, dan kelengkapan pengujian. |
 | `4c504de` | `Praktikum Pertemuan 5` | `feat(notes): implementasi penyimpanan lokal sqflite dan sinkronisasi offline-first + test` | Pesan lama sangat umum dan tidak menunjukkan fitur yang ditambahkan. Format baru menegaskan penambahan SQLite untuk persistensi lokal dan queue sinkronisasi offline-first pada modul catatan. |
 | `5e1f289` | `Menambahkan Dokumentasi` | `docs(notes): lengkapi panduan pengujian dan screenshot modul offline-first` | Pesan lama tidak menjelaskan dokumentasi apa dan untuk modul mana yang diperbarui. Format baru memperjelas tipe `docs`, scope `notes`, serta isi pembaruan pada README. |
+
+---
+
+## Praktikum 2: PR dan Peer Review
+
+### 1. Template Pull Request
+
+Pull Request dibuat dari branch `feat/notes-validation` menuju branch target `develop` dengan spesifikasi berikut:
+
+* **Judul:** `feat(notes): validasi judul kosong + test`
+* **Target Branch:** `develop` &larr; `feat/notes-validation`
+* **Deskripsi PR:**
+  ```markdown
+  ### Masalah
+  Pengguna sebelumnya dapat menyimpan catatan tanpa judul, atau dengan judul yang hanya berisi spasi kosong, sehingga menyebabkan data kosong pada tampilan list catatan.
+
+  ### Solusi
+  1. Validasi string kosong (`isEmpty`) dan pemangkasan whitespace (`trim()`) pada Domain Use Case `AddNote`.
+  2. Menyediakan state provider `addNoteProvider` untuk dependency injection yang rapi.
+  3. Menampilkan dialog form input catatan terisolasi (`AddNoteDialog`) dengan visual feedback pesan error via SnackBar jika judul kosong.
+  4. Penyusunan unit test komprehensif pada `validate_note_test.dart`.
+
+  ### Cara Uji
+  1. Jalankan aplikasi, buka halaman Catatan, tekan tombol FAB `+`.
+  2. Biarkan judul kosong dan tekan Simpan &rarr; Muncul SnackBar error: "Judul catatan tidak boleh kosong".
+  3. Masukkan judul valid dan tekan Simpan &rarr; Dialog tertutup dan catatan baru tampil di daftar.
+  4. Jalankan pengujian otomatis:
+     ```bash
+     flutter test test/validate_note_test.dart
+     ```
+
+  Closes #12
+  ```
+
+---
+
+### 2. Peer Code Review (Putaran 1)
+
+* **Reviewer:** Peer Reviewer (Pair Programming Partner)
+* **Status Keputusan Awal:** ⚠️ **Request changes**
+
+Setiap komentar review dirumuskan menggunakan pola standar industri: **Observasi &rarr; Dampak &rarr; Usulan Konkret**.
+
+#### Tabel Temuan Peer Review
+| No | Kategori | Observasi | Dampak | Usulan Konkret | Status |
+|:---|:---|:---|:---|:---|:---|
+| 1 | **Kebenaran (Edge Case)** | `AddNote` usecase memvalidasi `title.trim().isEmpty`, namun data yang diteruskan ke `_repository.addNote` masih berupa raw string `title` dan `body`. | Judul yang diawali/diakhiri banyak spasi (`"   Catatan   "`) tetap tersimpan kotor ke database SQLite. | Lakukan normalisasi string dengan `final cleanTitle = title.trim();` dan teruskan `cleanTitle` serta `body.trim()` ke repository. | ✅ Resolved |
+| 2 | **Kebenaran (Memory Leak)** | Controller `titleController` dan `bodyController` diinisialisasi lokal di dalam helper method tanpa pemanggilan `dispose()`. | Terjadi kebocoran memori (*memory leak*) setiap kali pengguna membuka dan menutup dialog tambah catatan. | Ekstraksi dialog menjadi `ConsumerStatefulWidget` terpisah (`AddNoteDialog`) dan override method `dispose()` untuk membersihkan controller. | ✅ Resolved |
+| 3 | **Arsitektur (Separation of Concerns)** | UI dialog input terpasang langsung di dalam `notes_page.dart` yang seharusnya hanya fokus menampilkan daftar catatan. | Melanggar *Single Responsibility Principle* dan menyulitkan pengujian widget dialog secara terisolasi. | Pisahkan widget dialog form ke kelas komponen tersendiri (`AddNoteDialog`) agar stateless/stateful terisolasi dan mudah di-maintain. | ✅ Resolved |
+| 4 | **Test (Coverage & Failure Path)** | Berkas `validate_note_test.dart` baru menguji skenario sukses dan validasi judul kosong lokal, belum menguji skenario ketika repository mengembalikan `LocalFailure`. | Jika terjadi error pada layer data/database, penanganan failure di usecase tidak terverifikasi oleh test runner. | Tambahkan test case `meneruskan failure dari repository tanpa melempar exception` menggunakan stub repository dengan `fail: true`. | ✅ Resolved |
+| 5 | **Keterbacaan & UI/UX** | Notifikasi SnackBar error menggunakan warna hardcoded `Colors.red` dan menutupi navigasi bawah. | Tampilan tidak adaptif dengan tema aplikasi (*Dark Mode / Light Mode*) dan kurang ergonomis. | Gunakan `Theme.of(context).colorScheme.error` untuk warna background dan tambahkan `behavior: SnackBarBehavior.floating`. | ✅ Resolved |
+
+---
+
+### 3. Tindak Lanjut dan Perbaikan oleh Author
+
+Author melakukan perbaikan menyeluruh berdasarkan 5 catatan peer review:
+1. **Refactor Use Case (`AddNote`):**
+   - Menambahkan sanitasi string dengan `cleanTitle = title.trim()` dan `body.trim()` sebelum memanggil repository.
+2. **Refactor Dialog Widget (`AddNoteDialog`):**
+   - Mengubah dialog menjadi `ConsumerStatefulWidget`.
+   - Mengelola lifecycle `_titleController` dan `_bodyController` dengan benar melalui `initState()` dan `dispose()`.
+   - Menerapkan error feedback menggunakan `Theme.of(context).colorScheme.error` dan `SnackBarBehavior.floating`.
+3. **Penyempurnaan Unit Test (`validate_note_test.dart`):**
+   - Menambahkan pengujian pemangkasan leading & trailing whitespace.
+   - Menambahkan pengujian failure propagation dari repository tiruan.
+4. **Commit Tindak Lanjut:**
+   ```bash
+   git commit -m "fix(notes): terapkan saran peer review untuk sanitasi input, lifecycle controller, dan failure test"
+   git push origin feat/notes-validation
+   ```
+
+---
+
+### 4. Re-Review & Keputusan Akhir
+
+* **Reviewer:** Peer Reviewer
+* **Hasil Verifikasi:**
+  - Seluruh 5 poin perbaikan telah diverifikasi langsung pada kode.
+  - Perintah `flutter test test/validate_note_test.dart` dijalankan: **4 of 4 tests passed**.
+  - Perintah `flutter analyze` dijalankan: **No issues found**.
+* **Keputusan Akhir:** ✅ **Approve**
+
+---
+
+### 5. Prosedur Merge dan Penutupan Issue
+
+Setelah status PR berubah menjadi **Approved** dan lolos verifikasi otomatis:
+1. Merge branch `feat/notes-validation` ke `develop`.
+2. Issue `#12` tertutup secara otomatis melalui kata kunci `Closes #12`.
+3. Branch `feat/notes-validation` dihapus setelah di-merge untuk menjaga kebersihan daftar branch.
+
