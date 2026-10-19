@@ -74,12 +74,12 @@ Tiga gerbang mesin (*machine checks*) wajib hijau sebelum kode diintegrasikan ke
    All tests passed! (16 passed in 8.0s)
 ```
 
-### Rincian 16 Unit & Widget Test yang Lolos:
+### Rincian 17 Unit & Widget Test yang Lolos:
 * `auth_push_test.dart` (4 tests): Navigasi payload FCM, deep linking, login state, auto refresh error handling.
 * `format_test.dart` (3 tests): Pure function date format, token truncation, route formatting.
 * `get_notes_test.dart` (2 tests): Usecase fetching notes, failure propagation.
 * `login_test.dart` (3 tests): Usecase valid auth session, invalid email failure, password length validation.
-* `validate_note_test.dart` (4 tests): Validasi judul kosong, judul valid, whitespace trimming, repository failure handling.
+* `validate_note_test.dart` (5 tests): Validasi judul kosong, judul valid, whitespace trimming, repository failure handling, batas maksimal 100 karakter.
 
 ---
 
@@ -109,13 +109,16 @@ flutter run
 
 ---
 
-## 📂 Struktur Direktori
+## 📂 Struktur Direktori & Dokumentasi Lengkap
 
 ```text
 08-week-8-mid-project-review/
-├── .github/workflows/ci.yml       # Konfigurasi CI otomatis
+├── .github/workflows/ci.yml       # Konfigurasi CI otomatis (format, analyze, test)
 ├── docs/
-│   └── review-checklist.md       # Audit Git, tabel sebelum/sesudah, checklist peer review & mid-review
+│   ├── review-checklist.md       # Audit Git, tabel sebelum/sesudah, checklist peer review & mid-review
+│   ├── ai-review-vs-keputusan.md # Prompt AI, output review, checklist verifikasi, tabel keputusan
+│   ├── refactoring-dan-error-umum.md # Refactoring challenge, CI formatting, tabel error umum
+│   └── refleksi_dan_referensi.md # 4 jawaban refleksi kritis & referensi kurikulum
 ├── lib/
 │   ├── core/                      # Failures domain & pure format utilities
 │   ├── data/                      # Legacy data sources & client
@@ -125,6 +128,13 @@ flutter run
 │   ├── messaging/                 # Push service FCM & local notification
 │   ├── pages/                     # Application pages
 │   └── main.dart                  # Entry point aplikasi
-├── test/                          # 16 unit tests komprehensif
+├── screenshots/                   # Bukti tangkapan layar verifikasi UI
+├── test/                          # 17 unit tests komprehensif
 └── README.md                      # Dokumentasi status paruh semester
 ```
+
+### 📑 Ringkasan Dokumen Modul (Folder `docs/`):
+1. [docs/review-checklist.md](docs/review-checklist.md): Pembahasan lengkap Praktikum 1 (Hygiene Branch & Audit Riwayat), Praktikum 2 (Template PR & Peer Review Checklist), dan Praktikum 3 (3 Grep Sterilitas & Matriks Kesiapan Mid-Review).
+2. [docs/ai-review-vs-keputusan.md](docs/ai-review-vs-keputusan.md): Rekaman AI Challenge, 5 temuan senior Flutter dev, checklist verifikasi kebenaran & arsitektur, serta argumen penolakan pelanggaran *Dependency Rule*.
+3. [docs/refactoring-dan-error-umum.md](docs/refactoring-dan-error-umum.md): Penyelesaian tantangan refactoring, otomatisasi style ke CI, tabel 5 gejala error umum dan solusinya, serta checklist verifikasi mandiri.
+4. [docs/refleksi_dan_referensi.md](docs/refleksi_dan_referensi.md): Pembahasan 4 pertanyaan refleksi kritis (LGTM buta vs responsible approval, kriteria request changes, evaluasi AI, dan dampak perbaikan konkret) serta daftar referensi resmi.

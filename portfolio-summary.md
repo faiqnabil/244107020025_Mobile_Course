@@ -17,7 +17,7 @@
 | **Week 5** | Local Storage & Offline-First | Menunggu | [05-week-5/...](05-week-5-local-storage-offline-first/) |
 | **Week 6** | Authentication, Security & FCM | Menunggu | [06-week-6/...](06-week-6-authentication-security-fcm/) |
 | **Week 7** | Clean Architecture | Selesai | [07-week-7/...](07-week-7-clean-architecture/) |
-| **Week 8** | Mid-Project Review | Menunggu | [08-week-8/...](08-week-8-mid-project-review/) |
+| **Week 8** | Mid-Project Review | Selesai | [08-week-8/...](08-week-8-mid-project-review/) |
 | **Week 9** | AI-Assisted Development | Menunggu | [09-week-9/...](09-week-9-ai-assisted-development/) |
 | **Week 10** | AI Feature Integration | Menunggu | [10-week-10/...](10-week-10-ai-feature-integration/) |
 | **Week 11** | Performance Optimization | Menunggu | [11-week-11/...](11-week-11-performance-optimization/) |
