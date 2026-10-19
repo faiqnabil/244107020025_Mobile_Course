@@ -5,8 +5,9 @@ import 'package:campus_notify/features/notes/domain/repositories/note_repository
 import 'package:campus_notify/features/notes/domain/usecases/add_note.dart';
 
 class FakeNoteRepository implements NoteRepository {
-  FakeNoteRepository();
+  FakeNoteRepository({this.fail = false});
 
+  final bool fail;
   Note? savedNote;
 
   @override
@@ -19,6 +20,12 @@ class FakeNoteRepository implements NoteRepository {
     required String title,
     String body = '',
   }) async {
+    if (fail) {
+      return (
+        note: null,
+        failure: const LocalFailure('Gagal menyimpan ke database'),
+      );
+    }
     savedNote = Note(
       id: 1,
       title: title,
@@ -70,5 +77,34 @@ void main() {
       expect(result.note?.title, 'Rencana Belajar');
       expect(repo.savedNote?.title, 'Rencana Belajar');
     });
+
+    test(
+      'judul dan isi dipangkas (trim) sebelum dikirim ke repository',
+      () async {
+        final repo = FakeNoteRepository();
+        final useCase = AddNote(repo);
+
+        final result = await useCase.call(
+          title: '   Catatan Penting   ',
+          body: '  Deskripsi materi kuliah  ',
+        );
+        expect(result.failure, isNull);
+        expect(repo.savedNote?.title, 'Catatan Penting');
+        expect(repo.savedNote?.body, 'Deskripsi materi kuliah');
+      },
+    );
+
+    test(
+      'meneruskan failure dari repository tanpa melempar exception',
+      () async {
+        final repo = FakeNoteRepository(fail: true);
+        final useCase = AddNote(repo);
+
+        final result = await useCase.call(title: 'Catatan Baru');
+        expect(result.failure, isA<LocalFailure>());
+        expect(result.failure?.message, 'Gagal menyimpan ke database');
+        expect(result.note, isNull);
+      },
+    );
   });
 }

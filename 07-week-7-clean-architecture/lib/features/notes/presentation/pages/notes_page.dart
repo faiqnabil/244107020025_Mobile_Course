@@ -23,74 +23,109 @@ class NotesPage extends ConsumerWidget {
             : NotesList(notes),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddNoteDialog(context, ref),
+        onPressed: () => showDialog(
+          context: context,
+          builder: (dialogContext) => const AddNoteDialog(),
+        ),
         child: const Icon(Icons.add),
       ),
     );
   }
+}
 
-  void _showAddNoteDialog(BuildContext context, WidgetRef ref) {
-    final titleController = TextEditingController();
-    final bodyController = TextEditingController();
+class AddNoteDialog extends ConsumerStatefulWidget {
+  const AddNoteDialog({super.key});
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Tambah Catatan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              key: const Key('note_title_field'),
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Judul',
-                hintText: 'Masukkan judul catatan',
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              key: const Key('note_body_field'),
-              controller: bodyController,
-              decoration: const InputDecoration(
-                labelText: 'Isi (opsional)',
-                hintText: 'Masukkan isi catatan',
-              ),
-              maxLines: 3,
-            ),
-          ],
+  @override
+  ConsumerState<AddNoteDialog> createState() => _AddNoteDialogState();
+}
+
+class _AddNoteDialogState extends ConsumerState<AddNoteDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _bodyController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _bodyController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    setState(() => _isLoading = true);
+    final result = await ref
+        .read(addNoteProvider)
+        .call(title: _titleController.text, body: _bodyController.text);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result.failure != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.failure!.message),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
+      );
+    } else {
+      ref.invalidate(notesProvider);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Tambah Catatan'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            key: const Key('note_title_field'),
+            controller: _titleController,
+            decoration: const InputDecoration(
+              labelText: 'Judul',
+              hintText: 'Masukkan judul catatan',
+            ),
           ),
-          ElevatedButton(
-            key: const Key('save_note_button'),
-            onPressed: () async {
-              final result = await ref
-                  .read(addNoteProvider)
-                  .call(title: titleController.text, body: bodyController.text);
-              if (result.failure != null) {
-                if (dialogContext.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result.failure!.message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              } else {
-                ref.invalidate(notesProvider);
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              }
-            },
-            child: const Text('Simpan'),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('note_body_field'),
+            controller: _bodyController,
+            decoration: const InputDecoration(
+              labelText: 'Isi (opsional)',
+              hintText: 'Masukkan isi catatan',
+            ),
+            maxLines: 3,
           ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          key: const Key('save_note_button'),
+          onPressed: _isLoading ? null : _handleSave,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Simpan'),
+        ),
+      ],
     );
   }
 }
