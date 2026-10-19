@@ -83,6 +83,17 @@ Tiga gerbang mesin (*machine checks*) wajib hijau sebelum kode diintegrasikan ke
 
 ---
 
+## 📸 Bukti Tangkapan Layar Aplikasi (Screenshots)
+
+Berikut adalah bukti tangkapan layar jalannya aplikasi secara langsung pada peranti fisik Android (**Vivo V2142 / Android 14**):
+
+| **1. Halaman Beranda (`Home Campus Notify`)** | **2. Halaman Daftar Catatan (`Notes`)** | **3. Rincian Pengumuman (`Detail`)** |
+|:---:|:---:|:---:|
+| <img src="screenshots/WhatsApp%20Image%202026-10-19%20at%2021.51.15.jpeg" width="280" alt="Halaman Beranda Campus Notify" /><br>*(WhatsApp Image 2026-10-19 at 21.51.15.jpeg)* | <img src="screenshots/WhatsApp%20Image%202026-10-19%20at%2021.51.15%20(1).jpeg" width="280" alt="Halaman Catatan Empty State" /><br>*(WhatsApp Image 2026-10-19 at 21.51.15 (1).jpeg)* | <img src="screenshots/WhatsApp%20Image%202026-10-19%20at%2021.51.15%20(2).jpeg" width="280" alt="Halaman Rincian Pengumuman" /><br>*(WhatsApp Image 2026-10-19 at 21.51.15 (2).jpeg)* |
+| **Penjelasan:**<br>Menampilkan antarmuka beranda utama aplikasi yang memuat kartu status *Debug Info FCM* (izin notifikasi berstatus aktif), tombol navigasi langsung untuk membuka fitur catatan (Praktikum 2 & 3), tombol pengumuman sampel, dan tombol logout sesi autentikasi. | **Penjelasan:**<br>Menampilkan antarmuka modul catatan dalam kondisi awal kosong (*Empty State: "Belum ada catatan."*) yang dikelola melalui state provider Riverpod, serta tombol Floating Action Button (`+`) di pojok kanan bawah untuk memunculkan modal dialog penambahan catatan (`AddNoteDialog`). | **Penjelasan:**<br>Menampilkan halaman rincian detail pengumuman kampus (*Pengumuman ID: 1*) yang diakses melalui routing `GoRouter`, membuktikan keberhasilan mekanisme navigasi internal serta kesiapan penanganan *deep link* dari payload notifikasi push. |
+
+---
+
 ## 🚀 Cara Menjalankan Project
 
 ### 1. Prasyarat
