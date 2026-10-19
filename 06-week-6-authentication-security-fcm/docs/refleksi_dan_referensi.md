@@ -46,3 +46,187 @@
 - [Package `flutter_local_notifications` (pub.dev)](https://pub.dev/packages/flutter_local_notifications)
 - [GoRouter Redirect & Deep Linking Guide](https://go_router.dev/)
 - [OWASP Mobile Top 10 Security Risks](https://owasp.org/www-project-mobile-top-10/)
+## Implementasi Autentikasi & Integrasi FCM
+
+### 1. Token Store (`lib/data/token_store.dart`)
+```dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class TokenStore {
+  TokenStore({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
+
+  final FlutterSecureStorage _storage;
+  static const _accessKey = 'access_token';
+  static const _refreshKey = 'refresh_token';
+
+  Future<void> save({required String access, required String refresh}) async {
+    await _storage.write(key: _accessKey, value: access);
+    await _storage.write(key: _refreshKey, value: refresh);
+  }
+
+  Future<String?> readAccess() => _storage.read(key: _accessKey);
+  Future<String?> readRefresh() => _storage.read(key: _refreshKey);
+
+  Future<void> clear() => _storage.deleteAll();
+}
+```
+
+### 2. Push Service (`lib/messaging/push_service.dart`)
+```dart
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+final _local = FlutterLocalNotificationsPlugin();
+String? pendingDeepLink;
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Background handling logic (e.g., log, store minimal data)
+}
+
+void registerBackgroundHandler() {
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+}
+
+Future<bool> requestNotificationPermission() async {
+  final settings = await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  return settings.authorizationStatus == AuthorizationStatus.authorized ||
+      settings.authorizationStatus == AuthorizationStatus.provisional;
+}
+
+Future<void> initLocalNotifications([void Function(String route)? onNotificationClick]) async {
+  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const ios = DarwinInitializationSettings();
+  await _local.initialize(
+    settings: const InitializationSettings(android: android, iOS: ios),
+    onDidReceiveNotificationResponse: (response) {
+      pendingDeepLink = response.payload;
+      if (response.payload != null && response.payload!.isNotEmpty && onNotificationClick != null) {
+        onNotificationClick(response.payload!);
+      }
+    },
+  );
+}
+
+Future<void> initFcmToken({required Future<void> Function(String token) onToken}) async {
+  final token = await FirebaseMessaging.instance.getToken();
+  if (token != null) await onToken(token);
+
+  FirebaseMessaging.instance.onTokenRefresh.listen(onToken);
+  await FirebaseMessaging.instance.subscribeToTopic('pengumuman-kampus');
+}
+
+void listenForeground(void Function(String route) go) {
+  FirebaseMessaging.onMessage.listen((message) async {
+    final route = message.data['route'] ?? '/';
+    const androidDetails = AndroidNotificationDetails(
+      'pengumuman',
+      'Pengumuman Kampus',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    await _local.show(
+      id: message.hashCode,
+      title: message.notification?.title ?? 'Pengumuman',
+      body: message.notification?.body ?? '',
+      notificationDetails: const NotificationDetails(android: androidDetails),
+      payload: route,
+    );
+  });
+}
+
+void listenBackgroundAndTerminated(void Function(String route) go) {
+  FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    final route = message.data['route'];
+    if (route != null && route.isNotEmpty) {
+      go(route);
+    }
+  });
+
+  FirebaseMessaging.instance.getInitialMessage().then((message) {
+    if (message != null) {
+      final route = message.data['route'];
+      if (route != null && route.isNotEmpty) {
+        go(route);
+      }
+    }
+  });
+}
+```
+
+### 3. Login Page (`lib/pages/login_page.dart`)
+```dart
+class LoginPage extends ConsumerStatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    ref.read(authStateProvider.notifier).login(email, password);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    ref.listen<AsyncValue<bool>>(authStateProvider, (prev, next) {
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(next.error!))),
+        );
+      }
+    });
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login Campus Notify')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: 'Kata Sandi', border: OutlineInputBorder()),
+              obscureText: true,
+            ),
+            const SizedBox(height: 24),
+            authState.isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(onPressed: _handleLogin, child: const Text('Login')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+These snippets illustrate how authentication state is managed via Riverpod (`authStateProvider`), how tokens are stored securely, and how FCM messages are handled across app states.
+
+---
+*Catatan*: Pastikan `flutter_secure_storage`, `firebase_messaging`, dan `flutter_local_notifications` berada pada versi terbaru (>=22) agar API di atas kompatibel.

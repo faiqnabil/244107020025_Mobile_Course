@@ -1,9 +1,8 @@
 // ignore_for_file: avoid_print
 
-/// Latihan Mandiri Dart Refresh - Minggu 1
-/// Nama: Muhammad Faiq Nabil Saputra
-/// NIM: 244107020025
-library;
+// Latihan Mandiri Dart Refresh - Minggu 1
+// Nama: Muhammad Faiq Nabil Saputra
+// NIM: 244107020025
 
 /// 1. Fungsi hitungLuasPersegiPanjang yang menerima panjang dan lebar bertipe double.
 double hitungLuasPersegiPanjang(double panjang, double lebar) {
@@ -16,11 +15,7 @@ class Profil {
   final String nim;
   final String? email;
 
-  Profil({
-    required this.nama,
-    required this.nim,
-    this.email,
-  });
+  Profil({required this.nama, required this.nim, this.email});
 
   String status() {
     return 'Mahasiswa: $nama | NIM: $nim';
@@ -49,7 +44,7 @@ void main() {
   Profil mhs1 = Profil(
     nama: 'Muhammad Faiq Nabil Saputra',
     nim: '244107020025',
-    email: 'faiq.nabil@example.com',
+    email: 'fq28nabil@gmail.com',
   );
   print(mhs1.status());
   print('Email   : ${mhs1.email?.toUpperCase() ?? 'BELUM DIISI'}\n');
