@@ -179,3 +179,109 @@ Setelah status PR berubah menjadi **Approved** dan lolos verifikasi otomatis:
 2. Issue `#12` tertutup secara otomatis melalui kata kunci `Closes #12`.
 3. Branch `feat/notes-validation` dihapus setelah di-merge untuk menjaga kebersihan daftar branch.
 
+---
+
+## Praktikum 3: Static Analysis dan Mid Review
+
+### 1. Pembersihan dengan Tiga Perintah Mesin
+
+Tiga perintah analisis statis dan pengujian otomatis dijalankan pada proyek `08-week-8-mid-project-review`. Seluruhnya menghasilkan status **HIJAU (Lolos)**:
+
+#### A. Static Analysis (`flutter analyze`)
+```bash
+flutter analyze
+```
+* **Output:**
+  ```text
+  Analyzing 08-week-8-mid-project-review...                       
+  No issues found! (ran in 9.7s)
+  ```
+* **Keterangan:** Bebas dari error, warning, linter info (`unused_import`, `prefer_const`, `must_be_immutable`).
+
+#### B. Code Formatter (`dart format --set-exit-if-changed .`)
+```bash
+dart format --set-exit-if-changed .
+```
+* **Output:**
+  ```text
+  Formatted 34 files (0 changed) in 0.36 seconds.
+  ```
+* **Keterangan:** Seluruh berkas Dart pada `lib/` dan `test/` telah rapi sesuai konvensi gaya resmi Dart. Kode exit bernilai 0 (bersih).
+
+#### C. Unit & Widget Testing (`flutter test`)
+```bash
+flutter test
+```
+* **Output:**
+  ```text
+  00:00 +0: loading D:/mobile/08-week-8-mid-project-review/test/auth_push_test.dart
+  00:00 +0: D:/mobile/08-week-8-mid-project-review/test/auth_push_test.dart: routeFromMessage menangani route kosong dan tanpa slash
+  00:00 +1: D:/mobile/08-week-8-mid-project-review/test/auth_push_test.dart: data payload membawa id pengumuman
+  00:00 +2: D:/mobile/08-week-8-mid-project-review/test/auth_push_test.dart: provider auth membaca status login dari token
+  00:01 +3: D:/mobile/08-week-8-mid-project-review/test/auth_push_test.dart: refresh gagal -> sesi dibersihkan (paksa login ulang)
+  00:03 +4: D:/mobile/08-week-8-mid-project-review/test/format_test.dart: Format pure functions formatDate memformat DateTime ke format YYYY-MM-DD HH:mm
+  00:03 +5: D:/mobile/08-week-8-mid-project-review/test/format_test.dart: Format pure functions truncateToken memotong token yang lebih panjang dari limit
+  00:03 +6: D:/mobile/08-week-8-mid-project-review/test/format_test.dart: Format pure functions routeFromMessage menambahkan slash awal bila rute belum memilikinya
+  00:05 +7: D:/mobile/08-week-8-mid-project-review/test/get_notes_test.dart: GetNotes meneruskan daftar dari repository
+  00:06 +8: D:/mobile/08-week-8-mid-project-review/test/get_notes_test.dart: GetNotes meneruskan failure tanpa melempar
+  00:06 +9: D:/mobile/08-week-8-mid-project-review/test/login_test.dart: Login UseCase Login berhasil mengembalikan AuthSession ketika input valid
+  00:06 +10: D:/mobile/08-week-8-mid-project-review/test/login_test.dart: Login UseCase Login melempar NetworkFailure ketika email tidak valid
+  00:06 +11: D:/mobile/08-week-8-mid-project-review/test/login_test.dart: Login UseCase Login melempar NetworkFailure ketika password kurang dari 6 karakter
+  00:08 +12: D:/mobile/08-week-8-mid-project-review/test/validate_note_test.dart: AddNote Validation judul kosong mengembalikan LocalFailure dan tidak memanggil repository
+  00:08 +13: D:/mobile/08-week-8-mid-project-review/test/validate_note_test.dart: AddNote Validation judul valid berhasil menyimpan catatan via repository
+  00:08 +14: D:/mobile/08-week-8-mid-project-review/test/validate_note_test.dart: AddNote Validation judul dan isi dipangkas (trim) sebelum dikirim ke repository
+  00:08 +15: D:/mobile/08-week-8-mid-project-review/test/validate_note_test.dart: AddNote Validation meneruskan failure dari repository tanpa melempar exception
+  00:08 +16: All tests passed!
+  ```
+* **Keterangan:** Seluruh 16 unit test dari modul auth, navigasi push, formatting, dan catatan berhasil lolos 100%.
+
+---
+
+### 2. Konfigurasi Otomatisasi CI (`.github/workflows/ci.yml`)
+
+Workflow Continuous Integration (CI) dikonfigurasi pada [.github/workflows/ci.yml](file:///d:/mobile/.github/workflows/ci.yml) untuk memeriksa setiap Pull Request secara otomatis sebelum diizinkan untuk di-merge:
+
+```yaml
+name: ci
+on: [pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 08-week-8-mid-project-review
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - run: flutter analyze
+      - run: flutter test
+```
+
+---
+
+### 3. Pembuktian Struktur Feature-First (Tiga Grep Sterilitas)
+
+Verifikasi arsitektural Clean Architecture dijalankan untuk membuktikan kepatuhan terhadap *Dependency Rule*:
+
+| No | Uji Sterilitas Arsitektur | Perintah Grep | Hasil | Evaluasi |
+|:---|:---|:---|:---|:---|
+| 1 | **Presentation Steril dari Data Driver & Parser Mentah** | `git grep -E "Dio\(|openDatabase|getDatabasesPath|FlutterSecureStorage|SharedPreferences\.getInstance|jsonDecode" -- "08-week-8-mid-project-review/lib/features/*/presentation"` | **0 temuan** | ✅ LULUS: UI hanya berinteraksi melalui Notifier/Provider Riverpod dan Domain Entity. |
+| 2 | **Domain Steril dari Framework & Library Pihak Ketiga** | `git grep -E "import 'package:(flutter|dio|sqflite|firebase)" -- "08-week-8-mid-project-review/lib/features/*/domain" "08-week-8-mid-project-review/lib/core"` | **0 temuan** | ✅ LULUS: Domain murni bahasa Dart tanpa dependensi framework UI atau jaringan/database. |
+| 3 | **Domain Tidak Bergantung pada Data Layer** | `git grep -E "import '.*data/" -- "08-week-8-mid-project-review/lib/features/*/domain"` | **0 temuan** | ✅ LULUS: Arah dependensi benar (Data bergantung ke Domain via repository implementation). |
+
+---
+
+### 4. Matriks Penilaian Kesiapan Tengah Semester (Mid-Review Readiness)
+
+| Komponen Penilaian | Kondisi Target | Status Aktual | Catatan Verifikasi |
+|:---|:---|:---|:---|
+| **Fondasi Arsitektur** | Feature-First Clean Architecture terbukti steril | ✅ **Lulus (100%)** | 3/3 grep sterilitas nol temuan; pemisahan layer presentation, domain, dan data terisolasi. |
+| **Pemeriksaan Mesin** | Tiga perintah hijau (analyze, format, test) | ✅ **Lulus (100%)** | `flutter analyze` 0 issues, `dart format` exit 0, `flutter test` 16/16 passed. |
+| **CI Automation** | Otomasi penolakan PR kotor via GitHub Actions | ✅ **Aktif** | Berkas `.github/workflows/ci.yml` terkonfigurasi untuk memicu verifikasi pada setiap PR. |
+| **Git Hygiene & Flow** | Branch pendek, PR terarah ke `develop`, commit konvensional | ✅ **Lulus (100%)** | Branch `feat/notes-validation` dibuat dari `develop`, PR terstruktur, dan di-merge dengan aman. |
+| **Tindak Lanjut Review** | Seluruh komentar peer review diselesaikan | ✅ **Lulus (100%)** | 5 catatan review (2 kebenaran, 1 arsitektur, 1 test, 1 saran) telah diperbaiki dan diapprove. |
+| **Kelengkapan Dokumen** | `README.md`, `docs/`, `screenshots/`, panduan cara uji | ✅ **Lengkap** | Tersedia di `08-week-8-mid-project-review/`. |
+
+
