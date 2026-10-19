@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'features/notes/presentation/pages/notes_page.dart';
 import 'messaging/push_service.dart';
 import 'pages/announcement_page.dart';
 import 'pages/home_page.dart';
@@ -39,6 +40,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.announcement,
         builder: (_, s) =>
             AnnouncementPage(id: s.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.notes,
+        builder: (_, _) => const NotesPage(),
       ),
     ],
   );

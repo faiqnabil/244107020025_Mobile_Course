@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../core/format.dart';
 import '../messaging/push_service.dart';
 import '../providers/auth_provider.dart';
 import '../routes.dart';
@@ -42,12 +43,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  String _truncateToken(String? token) {
-    if (token == null || token.isEmpty) return 'Belum tersedia';
-    if (token.length <= 12) return token;
-    return '${token.substring(0, 12)}...';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,12 +80,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                       const SizedBox(height: 8),
                       Text('Izin Notifikasi: ${_permissionGranted ? "Diizinkan" : "Ditolak/Belum"}'),
                       const SizedBox(height: 4),
-                      Text('FCM Token (Truncated): ${_truncateToken(_fcmToken)}'),
+                      Text('FCM Token (Truncated): ${truncateToken(_fcmToken)}'),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.push(AppRoutes.notes);
+                },
+                icon: const Icon(Icons.note_alt_outlined),
+                label: const Text('Buka Fitur Catatan (Praktikum 2 & 3)'),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () {
                   context.go(AppRoutes.announcementDetail('1'));

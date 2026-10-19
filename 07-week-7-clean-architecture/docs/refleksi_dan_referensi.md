@@ -1,48 +1,45 @@
-# Refleksi & Referensi — Week 6
+# Refleksi & Referensi — Week 7: Clean Architecture
 
 ## 💬 Jawaban Refleksi
 
-### 1. Mengapa refresh token tidak boleh disimpan di SharedPreferences? Apa risikonya bila bocor?
+### 1. Mengapa interface repository harus tinggal di domain, bukan di data? Apa yang rusak bila dibalik?
 > **Jawaban:**  
-> `SharedPreferences` menyimpan data dalam bentuk file teks polos (XML di Android, plist di iOS) tanpa enkripsi bawaan. Jika perangkat di-*root* / *jailbreak*, atau jika terdapat celah malware/backup eksfiltrasi, file ini dapat dibaca secara langsung oleh pihak ketiga.  
-> **Risiko Kebocoran:** Refresh token adalah kredensial berumur panjang (misal 7-30 hari). Apabila refresh token bocor, penyerang (*attacker*) dapat meminta *access token* baru ke server kapan saja tanpa memerlukan kata sandi pengguna, sehingga akun dapat diambil alih secara permanen sampai sesi dicabut oleh server (OWASP Mobile M2: Insecure Data Storage).
+> Interface repository merepresentasikan **kontrak kebutuhan bisnis** yang ditentukan oleh domain, bukan kemampuan teknis yang disediakan oleh sumber data eksternal.  
+> **Konsekuensi bila dibalik (Dependency Inversion terlanggar):**  
+> Jika interface berada di layer `data`, maka layer `domain` harus mengimpor layer `data`. Akibatnya, dependensi mengarah ke luar (*domain bergantung pada data*). Hal ini merusak aturan utama Clean Architecture (*Dependency Rule*): domain menjadi rentan rusak setiap kali implementasi data driver berubah (misal migrasi dari SQLite ke Hive/REST API), serta menyulitkan pembuatan unit test murni karena domain tidak lagi terisolasi.
 
 ---
 
-### 2. Apa yang rusak bila `onTokenRefresh` diabaikan selama satu semester perkuliahan?
+### 2. Kapan use case benar-benar dibutuhkan, dan kapan repository langsung ke notifier sudah cukup?
 > **Jawaban:**  
-> Registration token FCM pada perangkat tidak bersifat permanen; token tersebut dapat berganti secara otomatis ketika aplikasi di-update, data dihapus (*clear data*), aplikasi di-reinstal, atau saat Firebase melakukan rotasi kunci keamanan.  
-> **Dampak:** Apabila `onTokenRefresh` tidak dipasang, backend kampus akan terus menyimpan token lama (*stale token*). Ketika backend mengirim notifikasi push penting (seperti perubahan jadwal ujian atau batas pembayaran UKT), server FCM akan menolak pengiriman (*Unregistered / Invalid Registration Token*). Akibatnya, mahasiswa tidak akan lagi menerima notifikasi push selama semester tersebut.
+> - **Use Case Dibutuhkan Saat:** Operasi bisnis memiliki logika validasi tersendiri (misal: validasi input sebelum login), memerlukan penggabungan (*orchestration*) lebih dari satu repository (misal: sinkronisasi catatan lokal dengan cloud API), atau memiliki aturan bisnis transformasi/pemfilteran data yang kompleks dan perlu diuji secara terisolasi.  
+> - **Repository Langsung ke Notifier Cukup Saat:** Operasi hanya berupa query pasif atau CRUD satu-baris sederhana (misal membaca detail data berdasarkan ID tanpa modifikasi apa pun). Memaksakan use case untuk operasi satu baris tersebut hanya akan menambah *boilerplate* tanpa nilai tambah arsitektur.
 
 ---
 
-### 3. Kapan memakai topik dan kapan memakai token perangkat? Beri contoh pesan kampus untuk masing-masing.
+### 3. Apa biaya over-engineering (use case per CRUD satu-baris) bagi tim kecil? Kapan biayanya sepadan?
 > **Jawaban:**  
-> - **Topik Messaging (`subscribeToTopic`):** Dipakai untuk siaran (*broadcast*) publik ke sekelompok pengguna yang memiliki preferensi/peran yang sama tanpa perlu menyimpan daftar token di database server.  
->   *Contoh Pesan Kampus:*  
->   - Topik `pengumuman-kampus`: "Pengumuman: Dies Natalis Kampus akan dilaksanakan besok."  
->   - Topik `angkatan-2024`: "Penting: Pengisian KRS Semester Ganjil dibuka hari ini."  
-> - **Token Perangkat (Device Token / Direct Messaging):** Dipakai untuk pesan terarah (*targeted notification*) khusus bagi satu individu pengguna tertentu.  
->   *Contoh Pesan Kampus:*  
->   - Notifikasi Personal: "Pembayaran UKT atas nama NIM 244107020025 berhasil diproses."  
->   - Notifikasi Tugas/Bimbingan: "Dosen Pembimbing telah memberikan catatan revisi pada proposal skripsi Anda."
+> - **Biaya Over-Engineering bagi Tim Kecil:**  
+>   - *Class Explosion*: Jumlah file bertambah drastis untuk logika yang sebenarnya hanya meneruskan satu fungsi (`repo.fetch()`).
+>   - *Cognitive Overhead & Maintenance Cost*: Memperlambat kecepatan pengembangan (*velocity*) karena setiap perubahan kecil mengharuskan developer mengedit 4-5 layer file sekaligus (entity, contract, impl, use case, provider).
+> - **Kapan Biayanya Sepadan:**  
+>   Biaya arsitektur formal sepadan saat aplikasi memiliki skala besar (*enterprise*), tim developer berjumlah banyak dan bekerja secara paralel, atau domain bisnis memiliki aturan kompleks yang sering berganti dan memerlukan jaminan uji unit 100% tanpa menyentuh layer framework/UI.
 
 ---
 
-### 4. Bagian mana dari draf AI yang Anda tolak atau perbaiki, dan mengapa?
+### 4. Bagian mana dari usulan AI yang Anda tolak atau sederhanakan, dan mengapa?
 > **Jawaban:**  
-> 1. **Sintaks API `flutter_local_notifications` v22:** Draf awal AI menggunakan positional argument lama pada metode `initialize` dan `_local.show`. Kami menolak dan menggantinya dengan *named parameters* (`settings:`, `id:`, `title:`, `body:`, `notificationDetails:`, `payload:`) agar kompatibel dengan versi terbaru dan lolos `flutter analyze`.  
-> 2. **Struktur Background Message Handler:** Draf AI sempat menempatkan handler `onBackgroundMessage` di dalam metode kelas instans. Kami memperbaikinya menjadi fungsi top-level bertanda `@pragma('vm:entry-point')` karena Flutter Engine mengeksekusi handler background pada isolate terpisah tanpa instance UI.  
-> 3. **Sensitivitas Tampilan Token di UI:** AI secara default menampilkan seluruh string token. Kami mengubahnya agar token selalu di-truncate (`substring(0, 12) + '...'`) untuk mencegah kebocoran kredensial pada screenshot laporan.
+> 1. **Penolakan Sub-layer Data Source Ekstrem:** AI sempat menyarankan pembagian `remote_data_source` dan `local_data_source` untuk setiap tabel kecil. Kami menyederhanakannya dengan menyatukan akses data langsung di dalam `RepositoryImpl` karena fitur masih bersifat lokal SQLite sederhana.
+> 2. **Penyederhanaan Use Case Satu-Baris:** Kami menolak usulan pembuatan kelas use case terpisah untuk setiap query CRUD sederhana (seperti `GetAnnouncementDetailUseCase`), dan hanya mempertahankan use case penting seperti `GetNotes` dan `Login` yang memiliki logika pemrosesan error atau aturan bisnis.
+> 3. **Penyelarasan Tipe Kembalian Record Dart:** AI awalnya menyarankan pelemparan exception tak tertangkap ke UI. Kami menyelaraskannya dengan pola record `({List<Note> notes, Failure? failure})` sesuai standar codelab agar penanganan kegagalan bersifat eksplisit dan tipe-aman.
 
 ---
 
 ## 📚 Referensi Pendukung
-- [Slide Week 6: Authentication, Security & FCM](../00-slides/Week_06_Authentication_Security_FCM.html)
-- [FCM Flutter Client Guide (Firebase Docs)](https://firebase.google.com/docs/cloud-messaging/flutter/client)
-- [FCM Message Types: Notification vs Data](https://firebase.google.com/docs/cloud-messaging/concept-options)
-- [Firebase Auth for Flutter Integration](https://firebase.google.com/docs/auth/flutter/start)
-- [Package `flutter_secure_storage` (pub.dev)](https://pub.dev/packages/flutter_secure_storage)
-- [Package `flutter_local_notifications` (pub.dev)](https://pub.dev/packages/flutter_local_notifications)
-- [GoRouter Redirect & Deep Linking Guide](https://go_router.dev/)
-- [OWASP Mobile Top 10 Security Risks](https://owasp.org/www-project-mobile-top-10/)
+- [Flutter App Architecture Guide (Official Flutter Docs)](https://docs.flutter.dev/app-architecture)
+- [The Clean Architecture by Robert C. Martin (Uncle Bob)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Riverpod Providers & Dependency Injection Guide](https://riverpod.dev/docs/concepts/providers)
+- [Dart Records & Patterns Documentation](https://dart.dev/language/records)
+- [Package `fpdart` & Functional Error Handling](https://pub.dev/packages/fpdart)
+- [Package `sqflite` (SQLite plugin for Flutter)](https://pub.dev/packages/sqflite)
+- [GoRouter Declarative Routing & Deep Linking](https://pub.dev/packages/go_router)

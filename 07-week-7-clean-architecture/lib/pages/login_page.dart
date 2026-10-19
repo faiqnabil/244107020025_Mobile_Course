@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/api_errors.dart';
+import '../core/failures.dart';
 import '../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -33,8 +33,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     ref.listen<AsyncValue<bool>>(authStateProvider, (previous, next) {
       if (next.hasError) {
+        final err = next.error;
+        final message = err is Failure
+            ? err.message
+            : err.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(next.error!))),
+          SnackBar(content: Text(message)),
         );
       }
     });

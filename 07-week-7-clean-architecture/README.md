@@ -1,121 +1,149 @@
-# Week 7 — Clean Architecture (Praktikum 1: Audit Layer Project Lama)
+# Week 7 — Clean Architecture
 
-Project **Campus Notify** — Implementasi Refactoring Arsitektur Perangkat Lunak berbasis **Clean Architecture** (Feature-First) dan **SOLID Principles**.
-
----
-
-## 📑 Praktikum 1: Audit Layer Project Lama
-
-### 1. Pemetaan File ke Layer & Identifikasi Masalah
-
-Berikut adalah tabel hasil audit struktur project `campus_notify` sebelum dilakukan refactoring ke Clean Architecture:
-
-| File | Layer saat ini | Masalah / Temuan Audit |
-| :--- | :--- | :--- |
-| `lib/pages/home_page.dart` | `presentation` | Memanggil fungsi push service FCM secara langsung di `initState()`; mencampur UI dengan logika notifikasi & manipulasi string token (`_truncateToken`). |
-| `lib/pages/login_page.dart` | `presentation` | Form login memanggil notifier secara langsung; pesan exception mentah belum dibungkus ke dalam domain `Failure`. |
-| `lib/pages/announcement_page.dart` | `presentation` | Widget presentation membaca parameter rute secara langsung tanpa layer domain/use case. |
-| `lib/data/api_client.dart` | `data` | Instansiasi `Dio(BaseOptions(...))` hardcoded langsung di file data tanpa abstraksi config atau DI. |
-| `lib/data/api_errors.dart` | `data` | Custom exception Dio belum dipetakan ke domain `Failure` sehingga penanganan error berpotensi bocor ke UI. |
-| `lib/data/auth_repository.dart` | `data` (+kontrak tercampur) | Interface (kontrak) dan implementasi masih menjadi satu kelas konkret di layer data. Tidak ada abstraksi di domain. |
-| `lib/data/token_store.dart` | `data` | Instansiasi default `FlutterSecureStorage()` dilakukan langsung pada constructor tanpa penyuntikan dependensi (DI). |
-| `lib/providers/auth_provider.dart` | `presentation` / `data` mix | Instansiasi `AuthRepository()` dan `TokenStore()` dilakukan secara manual di dalam provider (`authRepositoryProvider`, `tokenStoreProvider`), menyebabkan DI bocor. |
-| `lib/messaging/push_service.dart` | `infrastructure` / `data` | Service messaging FCM berada di luar struktur layer Clean Architecture standar (perlu direstrukturisasi). |
+Implementasi arsitektur perangkat lunak berbasis **Clean Architecture (Feature-First)** dan **SOLID Principles** pada project Flutter (`campus_notify` & `notes`).
 
 ---
 
-### 2. Audit Tiga Pelanggaran Klasik (Grep Analysis)
-
-Pemeriksaan otomatis menggunakan grep (`rg`) dilakukan untuk menandai titik-titik pelanggaran aturan dependensi dan DI:
-
-#### 🔍 Audit 1: Widget / Presentation yang menyentuh Jaringan / Storage / Database secara langsung
-```bash
-rg "Dio\(|http\.|openDatabase|SharedPreferences\.getInstance|FlutterSecureStorage" lib/pages lib/widgets
-```
-- **Hasil Audit**:
-  - `lib/data/token_store.dart`: `const FlutterSecureStorage()` (Instansiasi langsung storage)
-  - `lib/data/api_client.dart`: `Dio(BaseOptions(...))` (Instansiasi langsung HTTP Client)
-  - *Target Refactor*: Pastikan tidak ada widget/presentation yang menginstansiasi atau mengakses driver storage/network secara langsung.
-
-#### 🔍 Audit 2: Logika Bisnis & Formatting di dalam build() / Presentation
-```bash
-rg "DateFormat|jsonDecode|\.toIso8601String" lib/pages lib/widgets
-```
-- **Hasil Audit**: 0 temuan langsung untuk `DateFormat`/`jsonDecode`, namun ditemukan logika manipulasi/formatting string token FCM di `HomePage._truncateToken()` yang berada di presentation layer.
-- *Target Refactor*: Pindahkan seluruh formatting dan transformasi data ke domain/use case atau presenter helper murni.
-
-#### 🔍 Audit 3: Instansiasi Manual (Dependency Injection Bocor)
-```bash
-rg "Repository\(|Dio\(BaseOptions" lib/pages lib/providers
-```
-- **Hasil Audit**:
-  - `lib/providers/auth_provider.dart:7`: `Provider<AuthRepository>((ref) => AuthRepository());` (Instansiasi kelas konkret tanpa abstraksi interface)
-  - `lib/data/api_client.dart:6`: `final dio = Dio(BaseOptions(...));` (Instansiasi manual `Dio`)
-- *Target Refactor*: Seluruh instansiasi repository harus menggunakan kontrak *abstract class* di domain layer dan disuntikkan via Riverpod Provider.
-
-> 🎯 **Target Akhir Audit**: Setelah Praktikum 3, ketiga perintah grep di atas harus menghasilkan **0 temuan (NOL HASIL)** pada folder presentation dan domain!
+## 🎯 Tujuan Pembelajaran
+1. Menerapkan prinsip SOLID dan Separation of Concerns dalam ekosistem Flutter.
+2. Membangun struktur **Feature-First Clean Architecture** dengan 3 layer utama: `domain`, `data`, dan `presentation`.
+3. Mematuhi **Dependency Rule** (dependensi hanya mengarah ke dalam; layer domain murni tanpa ketergantungan framework/external library).
+4. Memisahkan objek `Entity` (bisnis murni) dengan `Model` (data/serialisasi).
+5. Menerapkan *Dependency Injection* menggunakan **Flutter Riverpod**.
+6. Melakukan *pure unit testing* pada Use Case dengan Repository tiruan (*fake*) tanpa database atau jaringan nyata.
 
 ---
 
-### 3. Gambaran Struktur Target Clean Architecture (Feature-First)
+## 🏗️ Struktur Arsitektur & Dependency Rule
 
-Berikut adalah struktur target yang dirancang untuk merefactor project ini ke dalam arsitektur **Feature-First Clean Architecture**:
+```text
+presentation (widget, notifier, router)
+      │
+      ▼  bergantung ke
+domain (entity, repository interface, use case, failure)
+      ▲
+      │  diimplementasikan oleh
+data (model, repository impl, SQLite/sqflite, secure storage, Dio)
+```
 
+### Struktur Folder Project (Feature-First)
 ```text
 lib/
 ├── core/
-│   ├── failures.dart                        # Failure domain murni Dart (seperti LocalFailure, NetworkFailure)
-│   └── providers.dart                       # Provider global / lintas fitur (misal: shared preferences, secure storage)
+│   ├── failures.dart                        # Failure domain (sealed class, murni Dart)
+│   └── format.dart                          # Fungsi murni formatting tanggal, token & route
 ├── features/
 │   ├── auth/
 │   │   ├── domain/
-│   │   │   ├── entities/auth_session.dart   # Entity bisnis murni (tanpa JSON mapping)
-│   │   │   ├── repositories/auth_repository.dart # Interface / Contract repository
-│   │   │   └── usecases/login.dart          # Single business operation use case
+│   │   │   ├── entities/auth_session.dart   # Pure business entity
+│   │   │   ├── repositories/auth_repository.dart # Interface repository
+│   │   │   └── usecases/login.dart          # Business use case
 │   │   ├── data/
-│   │   │   ├── models/auth_session_model.dart  # Model data + mapping toEntity() / toMap()
+│   │   │   ├── models/auth_session_model.dart  # Data model + mapping toEntity
+│   │   │   ├── token_store.dart             # Storage akses token terenkripsi
 │   │   │   └── repositories/auth_repository_impl.dart # Implementasi repository konkret
 │   │   └── presentation/
-│   │       ├── providers/auth_providers.dart # Riverpod Notifier + Wiring DI
-│   │       └── pages/login_page.dart        # Page UI murni
-│   └── announcements/
+│   │       ├── providers/auth_providers.dart # Riverpod Notifier & DI wiring
+│   │       └── pages/login_page.dart        # Halaman Login
+│   └── notes/
 │       ├── domain/
-│       │   ├── entities/announcement.dart   # Entity pengumuman
-│       │   ├── repositories/announcement_repository.dart # Interface repository
-│       │   └── usecases/get_announcements.dart # Use case membaca pengumuman
+│       │   ├── entities/note.dart           # Pure business entity
+│       │   ├── repositories/note_repository.dart # Interface repository
+│       │   ├── usecases/get_notes.dart      # Business use case
+│       │   └── usecases/add_note.dart       # Business use case
 │       ├── data/
-│       │   ├── models/announcement_model.dart # Model pengumuman + JSON parser
-│       │   └── repositories/announcement_repository_impl.dart # Implementasi
+│       │   ├── open_notes_db.dart           # Database opener provider
+│       │   ├── models/note_model.dart       # Model + mapping toMap, fromMap, toEntity
+│       │   └── repositories/note_repository_impl.dart # Implementasi repository konkret (sqflite)
 │       └── presentation/
-│           ├── providers/announcement_providers.dart # Provider state UI
-│           └── pages/
-│               ├── home_page.dart
-│               └── announcement_page.dart
-└── routes.dart                              # Declarative routing (GoRouter)
+│           ├── providers/notes_providers.dart # Riverpod Notifier & DI wiring
+│           └── pages/notes_page.dart        # Stateless/Consumer widget UI murni
+└── ...
 ```
+
+---
+
+## 📑 Rangkuman Praktikum
+
+### Praktikum 1: Audit Layer Project Lama
+- Mengidentifikasi pemetaan layer lama pada `campus_notify` dan 3 pelanggaran klasik:
+  1. *Presentation* menyentuh storage/jaringan langsung (`Dio`, `FlutterSecureStorage`).
+  2. Logika manipulasi/formatting data di dalam `build()`.
+  3. Instansiasi manual (DI bocor).
+- Dokumentasi lengkap audit: [`docs/praktikum_1_audit.md`](docs/praktikum_1_audit.md).
+
+### Praktikum 2: Domain dan Data per Fitur
+- Membuat layer **Domain murni (Pure Dart)**:
+  - `Failure`, `LocalFailure`, `NetworkFailure` di [`lib/core/failures.dart`](lib/core/failures.dart).
+  - Entitas bisnis `Note` di [`lib/features/notes/domain/entities/note.dart`](lib/features/notes/domain/entities/note.dart).
+  - Kontrak repository `NoteRepository` dengan kembalian Record Dart `({List<Note> notes, Failure? failure})`.
+  - Use case `GetNotes` di [`lib/features/notes/domain/usecases/get_notes.dart`](lib/features/notes/domain/usecases/get_notes.dart).
+- Membuat layer **Data**:
+  - `NoteModel` turunan dari `Note` dengan mapping `toMap()`, `fromMap()`, dan `toEntity()`.
+  - `NoteRepositoryImpl` yang mengimplementasikan `NoteRepository` menggunakan `sqflite`.
+
+### Praktikum 3: Presentation, DI, dan Verifikasi
+- Melakukan penyuntikan dependensi terpusat di Riverpod (`notes_providers.dart`).
+- Membuat `NotesPage` yang hanya mengonsumsi state via Riverpod tanpa menyentuh database atau parser JSON langsung.
+- Membuat pengujian unit use case dengan fake repository di [`test/get_notes_test.dart`](test/get_notes_test.dart).
+
+---
+
+## 🤖 AI Challenge (Bagian 6)
+- Prompt eksplorasi arsitektur feature-first, pemetaan file lama, evaluasi over-engineering (kapan use case wajib vs repository langsung ke notifier), serta wiring DI Riverpod.
+- Hasil verifikasi checklist, tabel perbandingan usulan AI vs keputusan final, dan analisis teknis didokumentasikan lengkap di:
+  👉 [`docs/ai_challenge.md`](docs/ai_challenge.md).
+
+---
+
+## 💬 Refleksi & Referensi (Bagian 8)
+- Jawaban 4 pertanyaan refleksi Clean Architecture, trade-off arsitektur bagi tim kecil, dan daftar referensi pendukung tersedia di:
+  👉 [`docs/refleksi_dan_referensi.md`](docs/refleksi_dan_referensi.md).
+
+---
+
+## 🧪 Hasil Verifikasi 3 Sterilitas Dependensi & Testing
+
+| Verifikasi | Perintah | Hasil | Status |
+| :--- | :--- | :---: | :---: |
+| **1. Presentation Steril dari Data Mentah** | `git grep -E "Dio\(|openDatabase|getDatabasesPath|FlutterSecureStorage|SharedPreferences\.getInstance|jsonDecode" lib/features/*/presentation` | **0 temuan** | ✅ LULUS |
+| **2. Domain Steril dari Framework & Packages** | `git grep -E "import 'package:(flutter|dio|sqflite|firebase)" lib/features/*/domain lib/core` | **0 temuan** | ✅ LULUS |
+| **3. Static Analysis** | `flutter analyze` | **No issues found!** | ✅ LULUS |
+| **4. Unit Testing** | `flutter test` | **12 / 12 tests passed!** | ✅ LULUS |
+
+### 🛠️ Refactoring Challenge (Bagian 7)
+- **Fitur Kedua (`auth`)**: Mengadopsi Clean Architecture penuh (`AuthSession` entity, `AuthRepository` interface, `AuthSessionModel`, `AuthRepositoryImpl`, `Login` use case, dan `auth_providers.dart`).
+- **Ekstraksi Formatting Murni**: Logika pemotongan token, formatting tanggal, dan normalisasi deep link diekstrak ke [`lib/core/format.dart`](lib/core/format.dart) tanpa ketergantungan widget.
+- **Sterilisasi UI dari Raw Exception**: UI hanya menerima pesan ramah pengguna (`Failure.message`).
+
+
+### 📸 Bukti Eksekusi & Screenshots
+Tangkapan layar pengujian antarmuka dan bukti verifikasi before/after disimpan pada direktori [`screenshots/`](screenshots/):
+- `screenshots/WhatsApp Image 2026-10-04 at 15.57.18 (1).jpeg` — Tampilan antarmuka beranda Campus Notify.
+- `screenshots/WhatsApp Image 2026-10-04 at 15.57.18 (2).jpeg` — Tampilan dialog & payload pesan pengumuman.
+- `screenshots/WhatsApp Image 2026-10-04 at 15.57.18.jpeg` — Tampilan form login autentikasi.
 
 ---
 
 ## 🛠️ Stack Teknologi
 - **Flutter SDK**
-- **Flutter Riverpod** (State Management & Dependency Injection)
-- **GoRouter** (Declarative Routing & Deep Linking)
-- **Dio** (HTTP Client & Interceptors)
+- **Flutter Riverpod** (Dependency Injection & State Management)
+- **sqflite & path** (Local Relational Storage di Layer Data)
+- **GoRouter** (Declarative Routing)
+- **Dio** (HTTP Client)
 - **flutter_secure_storage** (Secure Token Storage)
-- **firebase_core** & **firebase_messaging** (FCM Services)
+- **flutter_test** (Unit Testing Domain & Presentation)
 
 ---
 
-## 🧪 Verifikasi Status Snapshot Project
-Snapshot project sebelum refactoring telah dibuat dan dapat diverifikasi melalui perintah:
+## 🚀 Cara Menjalankan
 
-```bash
-# Snapshot Git Commit
-git log -n 1
+1. **Jalankan static analysis**:
+   ```bash
+   flutter analyze
+   ```
 
-# Analisis Static Code
-flutter analyze
-
-# Running Unit Tests
-flutter test
-```
+2. **Jalankan unit tests**:
+   ```bash
+   flutter test
+   ```
