@@ -30,7 +30,7 @@ class FakeNoteRepository implements NoteRepository {
       id: 1,
       title: title,
       body: body,
-      updatedAt: DateTime.now(),
+      updatedAt: DateTime(2026, 10, 19, 12, 0),
     );
     return (note: savedNote, failure: null);
   }
@@ -104,6 +104,24 @@ void main() {
         expect(result.failure, isA<LocalFailure>());
         expect(result.failure?.message, 'Gagal menyimpan ke database');
         expect(result.note, isNull);
+      },
+    );
+
+    test(
+      'judul melebihi 100 karakter mengembalikan LocalFailure dan tidak memanggil repository',
+      () async {
+        final repo = FakeNoteRepository();
+        final useCase = AddNote(repo);
+        final longTitle = 'A' * 101;
+
+        final result = await useCase.call(title: longTitle);
+        expect(result.failure, isA<LocalFailure>());
+        expect(
+          result.failure?.message,
+          'Judul catatan maksimal 100 karakter',
+        );
+        expect(result.note, isNull);
+        expect(repo.savedNote, isNull);
       },
     );
   });

@@ -17,6 +17,12 @@ class AddNote {
         failure: const LocalFailure('Judul catatan tidak boleh kosong'),
       ));
     }
+    if (cleanTitle.length > 100) {
+      return Future.value((
+        note: null,
+        failure: const LocalFailure('Judul catatan maksimal 100 karakter'),
+      ));
+    }
     return _repository.addNote(title: cleanTitle, body: body.trim());
   }
 }
