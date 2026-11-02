@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#4F7DC9"><title>#09 | AI-Assisted Development / Vibe Coding</title>
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono"><link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons"><link rel="stylesheet" href="../assets/codelab-elements/codelab-elements.css">
+</head><body>
+<google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+<google-codelab codelab-gaid="G-H7507PFEJB" id="09-minggu-9-ai-assisted-development-vibe-coding" title="#09 | AI-Assisted Development / Vibe Coding" environment="web" feedback-link="https://github.com/jti-polinema/flutter-codelab/issues">
+
+<google-codelab-step label="Selamat datang" duration="5">
+<p><strong>Terakhir diperbarui:</strong> 18 Oktober 2026<br></p>
+<p><a href="index.html" lang="id">Bahasa Indonesia</a> | <a href="index-en.html" lang="en">English</a></p>
+<h2 is-upgraded>Tujuan pembelajaran</h2><p>Setelah menyelesaikan codelab ini, mahasiswa mampu:</p><ul>
+<li>menjelaskan workflow AI-assisted development (prompt, generate, verify, test, refactor, explain);</li><li>menulis prompt dan konteks yang efektif untuk fitur Flutter kecil;</li><li>mengenali halusinasi dan keterbatasan AI pada kode Flutter;</li><li>melakukan debugging dan refactoring kode hasil AI ke Clean Architecture;</li><li>menguji kode hasil AI dengan <code>flutter analyze</code> dan test;</li><li>mendokumentasikan prompt, hasil AI, keputusan terima/tolak, dan bukti uji di <code>docs/ai-log.md</code>.</li></ul>
+<h2 is-upgraded>Persiapan</h2><ul><li>Laptop/PC dan project Minggu 5-8 yang sudah lolos review (mis. <code>week5_offline_notes</code> atau <code>campus_notify</code> hasil refactor Minggu 7). Codelab ini menambah satu fitur kecil dengan AI, bukan membuat project baru.</li><li>Flutter SDK, VS Code (ekstensi Flutter/Dart), Git, dan satu AI coding assistant (GitHub Copilot / Cursor / Claude Code / setara).</li><li>Pemahaman Riverpod, repository pattern, dan dependency rule Minggu 7.</li></ul>
+<aside class="warning"><p><strong>Kebijakan AI.</strong> Minggu 9 adalah materi AI yang dibolehkan secara bijak: AI boleh mengusulkan kode, tetapi Anda wajib membaca tiap baris, memverifikasi API, menguji, me-refactor, dan menjelaskan keputusan tanpa membuka AI. Nilai ada pada kualitas verifikasi dan alasan keputusan, bukan banyaknya kode AI.</p></aside>
+</google-codelab-step>
+
+<google-codelab-step label="Konsep workflow AI dan halusinasi" duration="15">
+<h2 is-upgraded>1. Siklus generate sampai explain</h2><p>AI mengusulkan, developer memutuskan:</p>
+<pre><code>1. Prompt -&gt; instruksi + konteks proyek
+2. Generate -&gt; AI mengusulkan kode
+3. Verify -&gt; baca, grep, cek API nyata
+4. Test -&gt; analyze + unit/widget test
+5. Refactor -&gt; rapikan ke Clean Architecture
+6. Explain -&gt; jelaskan tanpa buka AI</code></pre>
+<p>Gagal di langkah 3-6 berarti <em>vibe coding</em>: cepat di awal, mahal di akhir.</p>
+<h2 is-upgraded>2. Yang AI kuasai dan tidak</h2><table><tr><th>Area</th><th>Contoh</th><th>Sikap</th></tr><tr><td>Kuat</td><td>Boilerplate, pola umum, draft test, docs</td><td>Manfaatkan, tetap uji</td></tr><tr><td>Lemah</td><td>API baru, versi package, logika bisnis khusus</td><td>Verifikasi ekstra</td></tr><tr><td>Berbahaya</td><td>Token auth, query SQL, aturan keamanan</td><td>Jangan tempel secret; tulis manual</td></tr></table>
+<h2 is-upgraded>3. Tiga pola halusinasi Flutter</h2><ul><li><strong>Method fiktif:</strong> mis. <code>controller.searchFuzzy()</code> yang tidak ada. Cek via autocomplete IDE dan <code>pub.dev</code>.</li><li><strong>Package kadaluarsa:</strong> AI memakai API v1 padahal <code>pubspec</code> memakai v3. Cek <code>pubspec.lock</code> dan CHANGELOG.</li><li><strong>Logika yakin tapi salah:</strong> mis. filter case-sensitive yang meloloskan bug. Buktikan dengan satu test kecil.</li></ul>
+<aside class="special"><p><strong>Prinsip verifikasi:</strong> klaim AI adalah hipotesis sampai ada bukti: hasil <code>grep</code>, <code>flutter analyze</code> bersih, dan test hijau.</p></aside>
+</google-codelab-step>
+
+<google-codelab-step label="Praktikum 1: Prompt dan context engineering" duration="20">
+<h2 is-upgraded>1. Formula 5 slot</h2><p>Satu prompt baik mengisi lima slot secara singkat:</p>
+<pre><code>Peran: senior Flutter dev
+Konteks: feature-first, Riverpod, SQLite+Dio
+Tugas: tambah search judul notes + empty state
+Batas: jangan ubah arsitektur, maks 80 baris
+Output: kode + 3 test case + cara uji</code></pre>
+<h2 is-upgraded>2. Buruk vs baik</h2>
+<pre><code>buruk: "buatkan search notes yang keren"
+baik: "Tambah search judul notes.
+  Arsitektur: presentation-&gt;domain&lt;-data.
+  Jangan panggil SQLite dari widget.
+  Sertakan empty state + 1 widget test."</code></pre>
+<p>Prompt kabur menghasilkan kode kabur yang sulit diuji.</p>
+<h2 is-upgraded>3. Beri konteks, bukan secret</h2><ul><li>Sertakan: struktur folder, satu file kontrak repository/use case, dan versi package dari <code>pubspec.yaml</code>.</li><li>Jangan sertakan: token, API key, password, atau seluruh repo 500 file.</li><li>Tempel potongan kode relevan, bukan screenshot kabur. Sebutkan yang TIDAK boleh diubah.</li></ul>
+<aside class="warning"><p><strong>Privasi:</strong> jangan menempel token FCM, JWT, atau secret ke AI. Ganti dengan placeholder seperti <code>TOKEN_PLACEHOLDER</code> sebelum prompting.</p></aside>
+</google-codelab-step>
+
+<google-codelab-step label="Praktikum 2: Generate dan verifikasi search" duration="25">
+<h2 is-upgraded>1. Generate satu fitur kecil</h2><p>Minta AI membuat <strong>pencarian judul notes</strong> lengkap dengan empty state. Batasi satu fitur agar mudah diverifikasi. Simpan prompt mentah dan output awal AI ke <code>docs/ai-log.md</code>.</p>
+<h2 is-upgraded>2. Verifikasi 6 langkah</h2><ul><li>Baca tiap baris dan tandai yang belum dipahami.</li><li>Cek import: pastikan <code>domain/</code> bebas dari Flutter/Dio/SQLite.</li><li>Cek API: pastikan tiap method benar ada (autocomplete + pub.dev).</li><li>Jalankan <code>flutter analyze</code> sampai nol warning.</li><li>Tulis minimal 1 test sukses dan 1 test gagal untuk search.</li><li>Uji manual: query kosong, cocok, dan tak cocok (empty state).</li></ul>
+<h2 is-upgraded>3. Contoh test bukti</h2>
+<pre><code>test('filter abaikan huruf besar/kecil', () {
+  expect(filterNotes(list, 'belanja'), hasLength(2));
+});
+test('query tak cocok kembalikan kosong', () {
+  expect(filterNotes(list, 'zzz-tak-ada'), isEmpty);
+});</code></pre>
+<aside class="special"><p><strong>Bukti wajib:</strong> satu bug/halusinasi yang Anda temukan beserta cara membuktikannya lewat grep/test. Tanpa bukti ini, verifikasi dianggap belum dilakukan.</p></aside>
+</google-codelab-step>
+
+<google-codelab-step label="Praktikum 3: Debug dan refactor" duration="20">
+<h2 is-upgraded>1. Debug dengan test merah</h2>
+<pre><code>1. Reproduksi: langkah + input pemicu bug
+2. Isolasi: pindah filter ke use case murni
+3. Test merah: buat test gagal pembukti bug
+4. Perbaiki kecil, jalankan test + analyze
+5. Catat akar masalah di docs/ai-log.md</code></pre>
+<p>Jangan mengulang prompt <code>fix dong</code> tanpa bukti error atau test gagal.</p>
+<h2 is-upgraded>2. Refactor ke layer yang benar</h2>
+<pre><code>widget (UI saja)
+  -&gt; notifier (state saja)
+  -&gt; use case (aturan filter/search)
+  -&gt; repository (SQLite / Dio)</code></pre>
+<p>Pecah fungsi di atas 40 baris dan pastikan tidak ada panggilan database dari widget.</p>
+<h2 is-upgraded>3. Verifikasi akhir</h2>
+<pre><code>flutter analyze
+dart format --set-exit-if-changed .
+flutter test</code></pre>
+</google-codelab-step>
+
+
+<google-codelab-step label="AI Challenge" duration="15">
+<h2 is-upgraded>Peran AI pada codelab ini</h2><p>AI boleh menjadi generator dan reviewer awal yang cepat, tetapi <strong>Anda yang memutuskan</strong> mana yang diterima, ditolak, atau disederhanakan.</p>
+<h2 is-upgraded>AI Prompt Challenge</h2><p>Minta AI mereview kode search Anda:</p>
+<pre><code>Review kode search Flutter ini sebagai senior dev.
+Konteks: feature-first (presentation-&gt;domain&lt;-data),
+Riverpod, SQLite + Dio.
+Fokus: kebenaran, arsitektur, test. Abaikan style.
+Beri 3 temuan + level blocker/saran + alasan.</code></pre>
+<h2 is-upgraded>AI Verification Checklist</h2><ul><li>Minimal 1 temuan AI terbukti benar (bukti grep/test) lalu diperbaiki.</li><li>Minimal 1 temuan AI ditolak dengan alasan teknis tertulis.</li><li>Keputusan tiap file: terima, terima + refactor, atau tolak + tulis manual.</li><li>Mampu menjelaskan tiap keputusan tanpa membuka AI.</li></ul>
+<aside class="special"><p><strong>Tanggung jawab teknis:</strong> simpan prompt, output AI, tabel usulan-vs-keputusan, dan bukti analyze + test pada folder <code>docs/</code>.</p></aside>
+</google-codelab-step>
+
+<google-codelab-step label="Refactoring, testing, dan error umum" duration="15">
+<h2 is-upgraded>Refactoring Challenge</h2><ol type="1"><li>Perkecil hasil AI di atas 80 baris menjadi fungsi/use case kecil yang bisa diuji.</li><li>Pindahkan filter/search dari widget ke use case domain yang murni.</li><li>Hapus import lintas layer dan pastikan analyze tetap bersih.</li></ol>
+<h2 is-upgraded>Testing</h2>
+<pre><code>flutter test test/search_filter_test.dart
+# + 1 widget test untuk empty state
+# + uji manual 3 query + screenshot</code></pre>
+<h2 is-upgraded>Error umum dan solusinya</h2><table><tr><th>Gejala</th><th>Penyebab umum</th><th>Solusi</th></tr><tr><td>Method tidak ada</td><td>Halusinasi API</td><td>Cek pub.dev + autocomplete</td></tr><tr><td>Import lintas layer</td><td>Konteks kurang</td><td>Tegaskan batas + refactor</td></tr><tr><td>Semua test merah</td><td>Prompt terlalu besar</td><td>Minta 1 fitur kecil + 1 test</td></tr><tr><td>Prompt diulang terus</td><td>Tanpa reproduksi</td><td>Tulis langkah + test merah</td></tr><tr><td>Tak bisa menjelaskan</td><td>Terima mentah</td><td>Baca ulang + sederhanakan</td></tr></table>
+<h2 is-upgraded>Checklist verifikasi mandiri</h2><ul><li>Prompt 5 slot + konteks di <code>docs/ai-log.md</code>.</li><li><code>flutter analyze</code> bersih, <code>flutter test</code> hijau.</li><li>1 temuan AI dibuktikan benar + 1 ditolak beralasan.</li><li>Mampu menjelaskan tanpa membuka AI.</li></ul>
+</google-codelab-step>
+
+<google-codelab-step label="Tugas, refleksi, dan referensi" duration="10">
+<h2 is-upgraded>Mini project / Industry Challenge</h2><ol type="1"><li>Tambahkan satu fitur kecil dengan AI (search/filter/sort) + empty state.</li><li>Sertakan prompt inti, konteks ditempel, dan output awal AI di <code>docs/ai-log.md</code>.</li><li>Bukti mesin hijau: <code>flutter analyze</code> + <code>flutter test</code> di README.</li><li>Tabel terima/tolak saran AI + alasan teknis + bukti grep/test.</li><li>Push ke <code>09-week-9-ai-assisted-development/</code> berisi <code>docs/</code>, <code>README.md</code>, <code>screenshots/</code>. README menjelaskan fitur, prompt, stack, cara jalan, dan hasil.</li></ol>
+<h2 is-upgraded>Refleksi</h2><ul><li>Satu halusinasi AI apa yang Anda temukan dan bagaimana membuktikannya?</li><li>Prompt mana yang paling membantu dan apa yang Anda ubah?</li><li>Satu refactor apa yang Anda lakukan pada kode AI?</li><li>Keputusan terima/tolak mana yang paling sulit?</li></ul>
+<h2 is-upgraded>Referensi pendukung</h2><ul>
+<li><a href="../00-slides/Week_09_AI_Assisted_Development_Vibe_Coding.html" target="_blank">Slide Week 9: AI-Assisted Development / Vibe Coding</a></li>
+<li><a href="https://docs.flutter.dev/tools/using-ide" target="_blank">Flutter: Using IDEs and static analysis</a></li>
+<li><a href="https://dart.dev/tools/linter-rules" target="_blank">Dart: Linter rules</a></li>
+<li><a href="https://riverpod.dev/docs/introduction/getting_started" target="_blank">Riverpod: Getting started</a></li>
+<li><a href="https://docs.github.com/en/copilot/using-github-copilot/best-practices" target="_blank">GitHub Copilot: Best practices</a></li>
+<li><a href="https://learnxinyminutes.com/dart/" target="_blank">Learn Dart in Y Minutes</a></li>
+<li><a href="https://dart.dev/guides/language/language-tour" target="_blank">Dart Language Tour</a></li>
+</ul>
+</google-codelab-step>
+
+</google-codelab>
+<script src="../assets/codelab-elements/native-shim.js"></script><script src="../assets/codelab-elements/custom-elements.min.js"></script><script src="../assets/codelab-elements/prettify.js"></script><script src="../assets/codelab-elements/codelab-elements.js"></script><script src="//support.google.com/inapp/api.js"></script>
+</body></html>
+
