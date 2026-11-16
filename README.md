@@ -36,9 +36,9 @@ Struktur repositori menggunakan pendekatan **monorepo modular per minggu** (`XX-
 | **07** | **Clean Architecture (Feature-First)** | ✅ Selesai | [07-week-7/...](07-week-7-clean-architecture/) | Pemisahan 3 layer (Domain, Data, Presentation), SOLID, Dependency Rule, Mock tests. |
 | **08** | **Mid-Project Review & Code Review** | ✅ Selesai | [08-week-8/...](08-week-8-mid-project-review/) | Konsolidasi UTS, Issue tracking, Peer Code Review, otomatisasi CI via GitHub Actions. |
 | **09** | **AI-Assisted Development / Vibe Coding** | ✅ Selesai | [09-week-9/...](09-week-9-ai-assisted-development/) | Workflow AI (Prompt 5-slot, Verify, Refactor), Search & Empty State, AI Log audit. |
-| **10** | **AI Feature Integration** | ⏳ Mendatang | [10-week-10/...](10-week-10-ai-feature-integration/) | Integrasi model AI/ML on-device atau cloud API ke dalam alur aplikasi mobile. |
-| **11** | **Performance Optimization** | ⏳ Mendatang | [11-week-11/...](11-week-11-performance-optimization/) | Frame profiling, memory leak detection, const widgets, optimasi rendering list. |
-| **12** | **Testing & Quality Assurance** | ⏳ Mendatang | [12-week-12/...](12-week-12-testing-quality-assurance/) | Integration test end-to-end, code coverage, golden test, accessibility audit. |
+| **10** | **AI Feature Integration** | ✅ Selesai | [10-week-10/...](10-week-10-ai-feature-integration/) | Integrasi model AI/ML on-device atau cloud API ke dalam alur aplikasi mobile. |
+| **11** | **Performance Optimization** | ✅ Selesai | [11-week-11/...](11-week-11-performance-optimization/) | Frame profiling, memory leak detection, const widgets, optimasi rendering list. |
+| **12** | **Testing & Quality Assurance** | ✅ Selesai | [12-week-12/...](12-week-12-testing-quality-assurance/) | Integration test end-to-end, code coverage, golden test, accessibility audit. |
 | **13** | **CI/CD Automation** | ⏳ Mendatang | [13-week-13/...](13-week-13-ci-cd-automation/) | Pipeline build APK/AAB otomatis, testing gate otomatis, automated semantic release. |
 | **14** | **Deployment & Monitoring** | ⏳ Mendatang | [14-week-14/...](14-week-14-deployment-monitoring/) | Distribusi aplikasi, setup Firebase Crashlytics & Analytics, remote config. |
 | **15** | **Secure Mobile Development** | ⏳ Mendatang | [15-week-15/...](15-week-15-secure-mobile-development/) | Code obfuscation, certificate pinning, anti-tampering, security hardening. |
