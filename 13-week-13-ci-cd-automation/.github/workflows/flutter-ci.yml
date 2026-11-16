@@ -22,7 +22,23 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Set up signing keystore (placeholder)
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          # configure signing in gradle.properties if needed
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       - run: flutter pub get
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG=${{ github.ref_name }}
+          # Extract version without 'v' prefix if present
+          VERSION=${TAG#v}
+          # Update version in pubspec.yaml (assumes format x.y.z+build)
+          sed -i "s/^version:.*/version: ${VERSION}+${{ github.run_number }}/" pubspec.yaml
+          cat pubspec.yaml
+
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze --fatal-infos
       - run: flutter test --coverage
@@ -36,3 +52,12 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
+      - name: Create GitHub Release (draft)
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: CI Build ${{ github.run_number }}
+          draft: true
+          prerelease: false

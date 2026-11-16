@@ -39,7 +39,7 @@ Struktur repositori menggunakan pendekatan **monorepo modular per minggu** (`XX-
 | **10** | **AI Feature Integration** | ✅ Selesai | [10-week-10/...](10-week-10-ai-feature-integration/) | Integrasi model AI/ML on-device atau cloud API ke dalam alur aplikasi mobile. |
 | **11** | **Performance Optimization** | ✅ Selesai | [11-week-11/...](11-week-11-performance-optimization/) | Frame profiling, memory leak detection, const widgets, optimasi rendering list. |
 | **12** | **Testing & Quality Assurance** | ✅ Selesai | [12-week-12/...](12-week-12-testing-quality-assurance/) | Integration test end-to-end, code coverage, golden test, accessibility audit. |
-| **13** | **CI/CD Automation** | ⏳ Mendatang | [13-week-13/...](13-week-13-ci-cd-automation/) | Pipeline build APK/AAB otomatis, testing gate otomatis, automated semantic release. |
+| **13** | **CI/CD Automation** | ✅ Selesai | [13-week-13/...](13-week-13-ci-cd-automation/) | Pipeline build APK/AAB otomatis, testing gate otomatis, automated semantic release. |
 | **14** | **Deployment & Monitoring** | ⏳ Mendatang | [14-week-14/...](14-week-14-deployment-monitoring/) | Distribusi aplikasi, setup Firebase Crashlytics & Analytics, remote config. |
 | **15** | **Secure Mobile Development** | ⏳ Mendatang | [15-week-15/...](15-week-15-secure-mobile-development/) | Code obfuscation, certificate pinning, anti-tampering, security hardening. |
 | **16** | **Final Project Expo** | ⏳ Mendatang | [16-week-16/...](16-week-16-final-project-expo/) | Presentasi produk akhir aplikasi mobile terintegrasi secara profesional. |
